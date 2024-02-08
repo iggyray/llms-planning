@@ -1,19 +1,14 @@
 import os
 import random
-
 import yaml
-from Executor import Executor
 from utils import *
-from pathlib import Path
-from tarski.io import PDDLReader
 import argparse
 import time
-from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModel
 import json
 np.random.seed(42)
-import copy
-import time
 from tqdm import tqdm
+
+TARGET_INSTANCE_ID = 0
 class ResponseGenerator:
     def __init__(self, config_file, engine, verbose, ignore_existing):
         self.engine = engine
@@ -21,28 +16,16 @@ class ResponseGenerator:
         self.ignore_existing = ignore_existing
         self.max_gpt_response_length = 500
         self.data = self.read_config(config_file)
-        if self.engine == 'bloom':
-            self.model = self.get_bloom()
-        elif 'finetuned' in self.engine:
-            # print(self.engine)
-            assert self.engine.split(':')[1] is not None
-            model = ':'.join(self.engine.split(':')[1:])
-            # print(model)
-            self.engine='finetuned'
+        if 'llama2' in self.engine:
+            model = 'llama2'
+            self.engine='llama2'
             self.model = {'model':model}
         else:
             self.model = None
+
     def read_config(self, config_file):
         with open(config_file, 'r') as file:
             return yaml.safe_load(file)
-    def get_bloom(self):
-        max_memory_mapping = {0: "0GB", 1: "43GB", 2: "43GB", 3: "43GB", 4: "43GB", 5: "43GB"}
-        cache_dir = os.getenv('BLOOM_CACHE_DIR', '/data/karthik/LLM_models/bloom/')
-        tokenizer = AutoTokenizer.from_pretrained("bigscience/bloom")
-        model = AutoModelForCausalLM.from_pretrained("bigscience/bloom", cache_dir=cache_dir,
-                                                     local_files_only=False, load_in_8bit=True, device_map='auto',
-                                                     max_memory=max_memory_mapping)
-        return {'model': model, 'tokenizer': tokenizer}
 
     def get_responses(self, task_name, specified_instances = [], run_till_completion=False):
         output_dir = f"responses/{self.data['domain_name']}/{self.engine}/"
@@ -60,7 +43,10 @@ class ResponseGenerator:
                 structured_output['engine'] = self.engine        
         
             failed_instances = []
-            for instance in tqdm(structured_output["instances"]):
+
+            single_target_instance = [structured_output["instances"][TARGET_INSTANCE_ID]]
+
+            for instance in tqdm(single_target_instance):
                 if "llm_raw_response" in instance:
                     if instance["llm_raw_response"] and not self.ignore_existing:
                         if self.verbose:
@@ -97,15 +83,6 @@ class ResponseGenerator:
                     time.sleep(5)
             else:
                 break
-        
-            
-        
-        
-        
-            
-
-    
-
 
 if __name__=="__main__":
     random.seed(10)
