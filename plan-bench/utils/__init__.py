@@ -1,26 +1,20 @@
 import os
 import random
-import openai
 import numpy as np
 import hashlib
 from tarski.io import PDDLReader
 from tarski.syntax.formulas import *
-
-openai.api_key = os.environ["OPENAI_API_KEY"]
-random.seed(10)
-
 from .llm_utils import *
 from .pddl_to_text import *
 from .text_to_pddl import *
 from .task_utils import *
 import yaml
-
 import os
 import random
-import openai
 import numpy as np
 import hashlib
 import yaml
+random.seed(10)
 class LogisticsGenerator:
     def __init__(self, config_file):
         random.seed(10)
