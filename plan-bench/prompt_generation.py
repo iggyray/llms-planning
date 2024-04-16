@@ -91,7 +91,6 @@ class PromptGenerator:
         # ========================================== TASKS ========================================== #
     def task_1_plan_generation_v2(self):
         task_name = f"task_1_plan_generation"
-        instance_structured_outputs = []
         structured_output = self.load_json(task_name)
         
         if structured_output is None:
@@ -99,7 +98,7 @@ class PromptGenerator:
                                 "task": task_name,
                                 "prompt_type": "oneshot",
                                 "domain": self.data['domain_name'],
-                                "instances": instance_structured_outputs,
+                                "instances": [],
                                 }
         
         query = self.data["domain_intro"]
@@ -129,7 +128,11 @@ class PromptGenerator:
         instance_structured_output["example_instance_ids"] = examples
         instance_structured_output["query"] = query
         instance_structured_output["ground_truth_plan"] = gt_plan_text
-        structured_output["instances"][i - 1] = instance_structured_output
+
+        if i > len(structured_output["instances"]):
+            structured_output["instances"].append(instance_structured_output)
+        else:
+            structured_output["instances"][i - 1] = instance_structured_output
         self.save_json(task_name, structured_output)
 
     def task_1_plan_generation(self, specified_instances=[], random_example=False):
