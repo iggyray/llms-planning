@@ -89,7 +89,7 @@ class PromptGenerator:
         
     
         # ========================================== TASKS ========================================== #
-    def task_1_plan_generation_v2(self):
+    def task_1_plan_generation_v2(self, target_instance):
         task_name = f"task_1_plan_generation"
         structured_output = self.load_json(task_name)
         
@@ -100,13 +100,16 @@ class PromptGenerator:
                                 "domain": self.data['domain_name'],
                                 "instances": [],
                                 }
+            
+        if target_instance - len(structured_output["instances"]) > 1:
+            print(f"The next valid target_instance is {len(structured_output['instances']) + 1}")
+            return
         
         query = self.data["domain_intro"]
         examples = []
-        i = 1
 
         # add example problem & answer to query
-        example_instance_id = i
+        example_instance_id = target_instance
         examples.append(example_instance_id)
         example_instance = self.instance.format(example_instance_id)
         example_problem = self.get_problem(example_instance, self.domain_pddl)
@@ -129,10 +132,11 @@ class PromptGenerator:
         instance_structured_output["query"] = query
         instance_structured_output["ground_truth_plan"] = gt_plan_text
 
-        if i > len(structured_output["instances"]):
+        if target_instance > len(structured_output["instances"]):
             structured_output["instances"].append(instance_structured_output)
         else:
-            structured_output["instances"][i - 1] = instance_structured_output
+            instance_array_index = target_instance - 1
+            structured_output["instances"][instance_array_index] = instance_structured_output
         self.save_json(task_name, structured_output)
 
     def task_1_plan_generation(self, specified_instances=[], random_example=False):
@@ -902,6 +906,7 @@ if __name__=="__main__":
     parser.add_argument('--verbose', type=str, default="False", help='Verbose')
     #config
     parser.add_argument('--config', type=str, required=True, help='Config file name (no need to add .yaml)')
+    parser.add_argument('--target_instance', type=int, default=1)
     parser.add_argument('--specific_instances', nargs='+', type=int, default=[], help='List of instances to run')
     parser.add_argument('--random_example', type=str, default="False", help='Random example')
     parser.add_argument('--ignore_existing', action='store_true', help='Ignore existing output')
@@ -910,6 +915,7 @@ if __name__=="__main__":
     task = args.task
     config = args.config
     verbose = eval(args.verbose)
+    target_instance = args.target_instance
     specified_instances = args.specific_instances
     random_example = eval(args.random_example)
     ignore_existing = args.ignore_existing
@@ -918,7 +924,7 @@ if __name__=="__main__":
     config_file = f'./configs/{config}.yaml'
     prompt_generator = PromptGenerator(config_file, verbose, ignore_existing, seed)
     if task == 't1':
-        prompt_generator.task_1_plan_generation_v2()
+        prompt_generator.task_1_plan_generation_v2(target_instance)
         # prompt_generator.task_1_plan_generation(specified_instances, random_example)
     elif task == 't2':
         prompt_generator.task_2_plan_optimality(specified_instances, random_example)
