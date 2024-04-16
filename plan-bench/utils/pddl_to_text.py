@@ -143,3 +143,21 @@ def get_plan_as_text(data, given_plan=None):
     return PLAN
 
 
+def get_plan_as_text_v2(data):
+    OBJS = data['encoded_objects']
+    PLAN = ""
+
+    plan_file = "sas_plan"
+
+    with open(plan_file) as f:
+        plan = [line.rstrip() for line in f][:-1]
+
+    for action in plan:
+        action = action.strip("(").strip(")")
+        act_name, objs = action.split(" ")[0], action.split(" ")[1:]
+        objs = [OBJS[obj] for obj in objs]
+        PLAN += "(" + act_name + " " + " ".join(objs) + ")\n"
+
+    return PLAN
+
+
