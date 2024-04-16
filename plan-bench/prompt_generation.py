@@ -1,17 +1,15 @@
 import os
 import random
-
 import yaml
 from Executor import Executor
 from utils import *
 from pathlib import Path
 from tarski.io import PDDLReader
 import argparse
-import time
 import json
-
 from tqdm import tqdm
 
+FAST_DOWNWARD_PATH = "../planner_tools/downward"
 
 class PromptGenerator:
     def __init__(self,config_file, verbose, ignore_existing, seed) -> None:
@@ -43,11 +41,12 @@ class PromptGenerator:
         self.i_end = self.data['end']
     
     def compute_plan(self, domain, instance):
-        fast_downward_path = os.getenv("FAST_DOWNWARD")
         # Remove > /dev/null to see the output of fast-downward
-        assert os.path.exists(f"{fast_downward_path}/fast-downward.py")
-        cmd = f"{fast_downward_path}/fast-downward.py {domain} {instance} --search \"astar(lmcut())\" > /dev/null 2>&1"
+        assert os.path.exists(f"{FAST_DOWNWARD_PATH}/fast-downward.py")
+        cmd = f"{FAST_DOWNWARD_PATH}/fast-downward.py {domain} {instance} --search \"astar(lmcut())\" > /dev/null 2>&1"
         os.system(cmd)
+
+        command = f"../planner_tools/downward/fast-downward.py ./instances/blocksworld/generated_domain.pddl ./instances/blocksworld/generated_basic_3/instance-1.pddl --search 'astar(lmcut())'"
 
         if not os.path.exists(self.plan_file):
             return ""
@@ -90,6 +89,49 @@ class PromptGenerator:
         
     
         # ========================================== TASKS ========================================== #
+    def task_1_plan_generation_v2(self):
+        task_name = f"task_1_plan_generation"
+        instance_structured_outputs = []
+        structured_output = self.load_json(task_name)
+        
+        if structured_output is None:
+            structured_output = {
+                                "task": task_name,
+                                "prompt_type": "oneshot",
+                                "domain": self.data['domain_name'],
+                                "instances": instance_structured_outputs,
+                                }
+        
+        query = self.data["domain_intro"]
+        examples = []
+        i = 1
+
+        # add example problem & answer to query
+        example_instance_id = i
+        examples.append(example_instance_id)
+        example_instance = self.instance.format(example_instance_id)
+        example_problem = self.get_problem(example_instance, self.domain_pddl)
+        example_gt_plan = self.compute_plan(self.domain_pddl, example_instance)
+        query += fill_template(*instance_to_text(example_problem, example_gt_plan, self.data))
+
+        # add cur problem to query
+        cur_instance_id = example_instance_id + 1
+        cur_instance = self.instance.format(cur_instance_id)
+        cur_problem = self.get_problem(cur_instance, self.domain_pddl)
+        query += fill_template(*instance_to_text(cur_problem, "", self.data))
+
+        # gen ground truth plan
+        self.compute_plan(self.domain_pddl, cur_instance)
+        gt_plan_text = get_plan_as_text_v2(self.data)
+        
+        instance_structured_output = {}
+        instance_structured_output["instance_id"] = cur_instance_id
+        instance_structured_output["example_instance_ids"] = examples
+        instance_structured_output["query"] = query
+        instance_structured_output["ground_truth_plan"] = gt_plan_text
+        structured_output["instances"][i - 1] = instance_structured_output
+        self.save_json(task_name, structured_output)
+
     def task_1_plan_generation(self, specified_instances=[], random_example=False):
         task_name = f"task_1_plan_generation"
         instance_structured_outputs = []
@@ -873,7 +915,8 @@ if __name__=="__main__":
     config_file = f'./configs/{config}.yaml'
     prompt_generator = PromptGenerator(config_file, verbose, ignore_existing, seed)
     if task == 't1':
-        prompt_generator.task_1_plan_generation(specified_instances, random_example)
+        prompt_generator.task_1_plan_generation_v2()
+        # prompt_generator.task_1_plan_generation(specified_instances, random_example)
     elif task == 't2':
         prompt_generator.task_2_plan_optimality(specified_instances, random_example)
     elif task == 't3':
