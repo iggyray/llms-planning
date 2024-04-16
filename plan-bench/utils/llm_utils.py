@@ -1,6 +1,3 @@
-from transformers import StoppingCriteriaList, StoppingCriteria
-import openai
-import os
 import subprocess
 
 def prompt_llama2(query):

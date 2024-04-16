@@ -331,6 +331,7 @@ if __name__=="__main__":
                         \n curie = GPT-3 Curie \
                         \n babbage = GPT-3 Babbage \
                         \n ada = GPT-3 Ada \
+                        \n llama2 = llama2 \
                         ')
                         
     parser.add_argument('--verbose', type=str, default="False", help='Verbose')
