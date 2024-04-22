@@ -120,7 +120,7 @@ class PromptGenerator:
         cur_instance_id = example_instance_id + 1
         cur_instance = self.instance.format(cur_instance_id)
         cur_problem = self.get_problem(cur_instance, self.domain_pddl)
-        query += fill_template(*instance_to_text(cur_problem, "", self.data))
+        query += fill_template(*instance_to_text(cur_problem, "", self.data), True)
 
         # gen ground truth plan
         self.compute_plan(self.domain_pddl, cur_instance)
