@@ -61,15 +61,18 @@ def parse_problem(problem, data, shuffle):
 
 def fill_template(INIT, GOAL, PLAN, data, instruction=False):
     text = ""
+    if INIT != "" and not instruction:
+        text += "\n<example>\n"
+    if INIT != "" and instruction:
+        text += "\n<problem>\n"
     if INIT != "":
-        text += "\n[STATEMENT]\n"
         text += f"As initial conditions I have that, {INIT.strip()}."
     if GOAL != "":
         text += f"\nMy goal is to have that {GOAL}."
     if not instruction:
-        text += f"\n\nMy plan is as follows:\n\n[PLAN]{PLAN}"
+        text += f"\n\nMy plan is as follows:\n\n<plan>{PLAN}</plan>\n</example>\n"
     else:
-        text += f"\n\nWhat is the plan to achieve my goal? Just give the actions in the plan."
+        text += f"\n\nWhat is the plan to achieve my goal? Just give the actions in the plan.\n\n</problem>"
 
     # TODO: Add this replacement to the yml file -- Use "Translations" dict in yml
     if 'blocksworld' in data['domain_name']:
@@ -107,7 +110,6 @@ def instance_to_text(problem, get_plan, data, shuffle=False):
             # ADD SPECIFIC TRANSLATION FOR EACH DOMAIN HERE
         
             PLAN += data['actions'][act_name].format(*objs) + "\n"
-        PLAN += "[PLAN END]\n"
 
     return INIT, GOAL, PLAN, data
 
