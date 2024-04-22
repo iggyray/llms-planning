@@ -8,7 +8,7 @@ import json
 np.random.seed(42)
 from tqdm import tqdm
 
-TARGET_INSTANCE_ID = 0
+TARGET_INSTANCE_ID = 1
 class ResponseGenerator:
     def __init__(self, config_file, engine, verbose, ignore_existing):
         self.engine = engine
@@ -84,6 +84,44 @@ class ResponseGenerator:
             else:
                 break
 
+    def get_response(self, task_name, target_instance_number):
+        output_dir = f"responses/{self.data['domain_name']}/{self.engine}/"
+        os.makedirs(output_dir, exist_ok=True)
+        output_json = output_dir+f"{task_name}.json"
+
+        if os.path.exists(output_json):
+            with open(output_json, 'r') as file:
+                structured_output = json.load(file)
+        else:
+            prompt_dir = f"prompts/{self.data['domain_name']}/"
+            assert os.path.exists(prompt_dir+f"{task_name}.json")
+            with open(prompt_dir+f"{task_name}.json", 'r') as file:
+                structured_output = json.load(file)
+            structured_output['engine'] = self.engine
+    
+        failed_instances = []
+
+        instance_array_index = target_instance_number - 1
+
+        single_target_instance = [structured_output["instances"][instance_array_index]]
+
+        for instance in tqdm(single_target_instance):
+            if "llm_raw_response" in instance:
+                if instance["llm_raw_response"] and not self.ignore_existing:
+                    continue             
+            
+            query = instance["query"]
+            stop_statement = "[STATEMENT]"
+
+            llm_response = send_query(query, self.engine, self.max_gpt_response_length, model=self.model, stop=stop_statement)
+            if not llm_response:
+                failed_instances.append(instance['instance_id'])
+                print(f"Failed instance: {instance['instance_id']}")
+                continue
+            instance["llm_raw_response"] = llm_response
+            with open(output_json, 'w') as file:
+                json.dump(structured_output, file, indent=4)
+
 if __name__=="__main__":
     random.seed(10)
     parser = argparse.ArgumentParser()
@@ -112,6 +150,7 @@ if __name__=="__main__":
     parser.add_argument('--verbose', type=str, default="False", help='Verbose')
     #config
     parser.add_argument('--config', type=str, required=True, help='Config file name (no need to add .yaml)')
+    parser.add_argument('--target_instance', type=int, default=1)
     parser.add_argument('--run_till_completion', type=str, default="False", help='Run till completion')
     parser.add_argument('--specific_instances', nargs='+', type=int, default=[], help='List of instances to run')
     parser.add_argument('--ignore_existing', action='store_true', help='Ignore existing output')
@@ -120,6 +159,7 @@ if __name__=="__main__":
     task = args.task
     engine = args.engine
     config = args.config
+    target_instance = args.target_instance
     specified_instances = args.specific_instances
     verbose = eval(args.verbose)
     run_till_completion = eval(args.run_till_completion)
@@ -146,7 +186,7 @@ if __name__=="__main__":
         task_name = task_dict[task]
     except:
         raise ValueError("Invalid task name")
-    response_generator.get_responses(task_name, specified_instances, run_till_completion=run_till_completion)
+    response_generator.get_response(task_name, target_instance)
 
 
 
