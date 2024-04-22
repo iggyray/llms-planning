@@ -20,6 +20,10 @@ class ResponseGenerator:
             model = 'llama2'
             self.engine='llama2'
             self.model = {'model':model}
+        elif 'llama3' in self.engine:
+            model = 'llama3'
+            self.engine='llama3'
+            self.model = {'model':model}
         else:
             self.model = None
 
@@ -145,6 +149,8 @@ if __name__=="__main__":
                         \n curie = GPT-3 Curie \
                         \n babbage = GPT-3 Babbage \
                         \n ada = GPT-3 Ada \
+                        \n llama2 = llama2 \
+                        \n llama3 = llama3 \
                         ')
                         
     parser.add_argument('--verbose', type=str, default="False", help='Verbose')
