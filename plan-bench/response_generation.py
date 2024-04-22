@@ -8,7 +8,7 @@ import json
 np.random.seed(42)
 from tqdm import tqdm
 
-TARGET_INSTANCE_ID = 1
+TARGET_INSTANCE_ID = 0
 class ResponseGenerator:
     def __init__(self, config_file, engine, verbose, ignore_existing):
         self.engine = engine
