@@ -14,6 +14,7 @@ import random
 import numpy as np
 import hashlib
 import yaml
+from dotenv import load_dotenv
 random.seed(10)
 class LogisticsGenerator:
     def __init__(self, config_file):
@@ -247,8 +248,9 @@ def treat_on(letters_dict, atom):
 
 
 def validate_plan(domain, instance, plan_file):
-    val_path = os.getenv("VAL")
-    cmd = f"{val_path}/validate {domain} {instance} {plan_file}"
+    load_dotenv()
+    val_path = os.getenv("VAL_PATH_FROM_PLAN_BENCH_DIR")
+    cmd = f"{val_path} {domain} {instance} {plan_file}"
     response = os.popen(cmd).read()
     if 'Problem in domain' in response:
         raise Exception('Problem in domain: Check PDDL Writer')
