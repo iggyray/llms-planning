@@ -11,6 +11,7 @@
 utils/__pycache__/*
 *.pyc
 *.DS_Store
+planner_tools/VAL
 
 
 llm_planning_analysis/configs/mystery_blocksworld_with_mapping.yaml
