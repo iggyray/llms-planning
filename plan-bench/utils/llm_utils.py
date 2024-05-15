@@ -58,7 +58,3 @@ def send_query(query, engine, max_tokens, model=None, stop="[STATEMENT]"):
     else:
         print("invalid engine")
         return ""
-    
-if __name__ == "__main__":
-    response = prompt_llama3_80b("hi")
-    print(response)
