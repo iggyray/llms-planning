@@ -162,4 +162,52 @@ def get_plan_as_text_v2(data):
 
     return PLAN
 
+def get_problem_description(INIT, GOAL, config):
+    description = f'<domain>{config["domain_intro"]}</domain>\n\n'
+    if INIT != "":
+        description += f"<initial-state>As initial conditions I have that, {INIT.strip()}.</initial-state>\n\n"
+    if GOAL != "":
+        description += f"<goal-state>My goal is to have that {GOAL.strip()}.</goal-state>\n\n"
+
+    if 'blocksworld' in config['domain_name']:
+        description = description.replace("-", " ").replace("ontable", "on the table")
+    return description
+
+def get_gt_plan_description(config):
+    OBJS = config['encoded_objects']
+    # ----------- PLAN TO TEXT ----------- #
+    PLAN = ""
+    plan_file = "sas_plan"
+
+    with open(plan_file) as f:
+        plan = [line.rstrip() for line in f][:-1]
+
+    for action in plan:
+        action = action.strip("(").strip(")")
+        act_name, objs = action.split(" ")[0], action.split(" ")[1:]
+        if 'obfuscated' in config["domain_name"]:
+            objs = [j.replace('o','object_') for j in objs]
+        elif 'blocksworld' in config['domain_name']:
+            objs = [OBJS[obj] for obj in objs]
+        elif 'logistics' in config['domain_name']:
+            objs = [f"{OBJS[obj[0]].format(*[chr for chr in obj if chr.isdigit()])}" for obj in objs]
+    
+        PLAN += config['actions'][act_name].format(*objs) + "\n"
+
+    return PLAN
+
+def get_action_description(config, action):
+    OBJS = config['encoded_objects']
+    PLAN = ""
+    action = action.strip("(").strip(")\n")
+    act_name, objs = action.split(" ")[0], action.split(" ")[1:]
+    if 'obfuscated' in config["domain_name"]:
+        objs = [j.replace('o','object_') for j in objs]
+    elif 'blocksworld' in config['domain_name']:
+        objs = [OBJS[obj] for obj in objs]
+    elif 'logistics' in config['domain_name']:
+        objs = [f"{OBJS[obj[0]].format(*[chr for chr in obj if chr.isdigit()])}" for obj in objs]
+    PLAN += config['actions'][act_name].format(*objs) + "\n"
+
+    return PLAN
 
