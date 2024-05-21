@@ -58,9 +58,16 @@ class tot_pipeline:
                                 }
             return structured_output
     
-    def save_json(self, prompt_report, updated_plan=None):
+    def save_json(self, prompt_number, prompt_report, updated_plan=None):
         os.makedirs(f"prompts/blocksworld_3_tot/", exist_ok=True)
-        self.tot_state["prompts"].append(prompt_report)
+
+        is_prompt_report_exists = len(self.tot_state["prompt"]) >= prompt_number
+        if (is_prompt_report_exists):
+            target_prompt_index = prompt_number - 1
+            self.tot_state["prompt"][target_prompt_index] = prompt_report
+        else:
+            self.tot_state["prompt"].append(prompt_report)
+
         if (updated_plan is not None):
             self.tot_state["llm_plan"] = updated_plan
         file_name = f'instance-{self.instance_number}'
@@ -71,7 +78,19 @@ class tot_pipeline:
         pddl_action, _ = text_to_plan(llm_raw_response, self.problem.actions, "llm_plan", self.config)
         return get_action_description(self.config, pddl_action)
     
-    def tot_prompt_llama3_80b(self, prompt_number, prompt):
+    def init_prompt_llama3_80b(self, prompt_number):
+        prompt_with_domain = self.problem_description + exp_init_tot_prompt
+        response = prompt_llama3_80b(prompt_with_domain)
+        possible_actions = response.split("The possible actions are: ")[-1]
+        report = {
+            "prompt_number": prompt_number,
+            "prompt": exp_init_tot_prompt,
+            "response": possible_actions
+        }
+        self.save_json(report)
+
+    def tot_prompt_llama3_80b(self, prompt_number):
+        prompt = exp_tot_prompt.format(self.tot_state["llm_plan"], "2")
         prompt_with_domain = self.problem_description + prompt
         response = prompt_llama3_80b(prompt_with_domain)
         possible_actions = response.split("The possible actions are: ")[-1]
@@ -103,7 +122,6 @@ class tot_pipeline:
         prompt_with_domain = self.problem_description + validate_prompt
         response = prompt_llama3_80b(prompt_with_domain)
         validation_line = response.splitlines()[-1].lower()
-        print(validation_line)
         report = {
             "prompt_number": prompt_number,
             "prompt": validate_prompt,
@@ -117,7 +135,11 @@ class tot_pipeline:
             return True
     
 if __name__=="__main__":
-    tot = tot_pipeline(1)
-    # tot.tot_prompt_llama3_80b(1, tot_prompt_1)
-    # tot.vote_prompt_llama3_80b(2)
-    tot.validate_prompt_llama3_80b(3)
+    prompt_number = 1
+    is_plan_in_progress = True
+    while is_plan_in_progress:
+        tot = tot_pipeline(1)
+        # tot.tot_prompt_llama3_80b(1)
+        # tot.vote_prompt_llama3_80b(2)
+        # tot.validate_prompt_llama3_80b(3)
+        tot.tot_prompt_llama3_80b()
