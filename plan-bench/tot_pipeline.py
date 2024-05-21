@@ -2,6 +2,7 @@
 # open json file (for logging)
 # generate starting prompt
 
+import math
 from dotenv import load_dotenv
 import yaml
 import os
@@ -89,11 +90,11 @@ class tot_pipeline:
             "response": possible_actions
         }
         print("[INIT] " + possible_actions)
-        self.save_json(prompt_number, report)
+        self.save_json(prompt_number, report,  '')
         self.vote_prompt_llama3_80b(prompt_number + 1)
 
     def tot_prompt_llama3_80b(self, prompt_number):
-        prompt = exp_tot_prompt.format(self.tot_state["llm_plan"], "2")
+        prompt = exp_tot_prompt.format(self.tot_state["llm_plan"], math.ceil(prompt_number/3))
         prompt_with_domain = self.problem_description + prompt
         response = prompt_llama3_80b(prompt_with_domain)
         possible_actions = response.split("The possible actions are: ")[-1]
@@ -109,10 +110,10 @@ class tot_pipeline:
     def vote_prompt_llama3_80b(self, prompt_number):
         tot_prompt_index = prompt_number - 2
         possible_actions = self.tot_state["prompts"][tot_prompt_index]["response"]
-        vote_prompt = exp_vote_prompt.format(possible_actions)
+        vote_prompt = exp_vote_prompt.format(self.tot_state["llm_plan"], math.ceil(prompt_number/3), possible_actions)
         prompt_with_domain = self.problem_description + vote_prompt
         response = prompt_llama3_80b(prompt_with_domain)
-        voted_action = response.lower().split("the best choice is")[-1]
+        voted_action = response.lower().split("the best choice is")[-1].replace('*', '')
         print("[VOTE] " + voted_action)
         updated_plan = self.tot_state["llm_plan"] + self.get_llm_action_description(voted_action)
         report = {
