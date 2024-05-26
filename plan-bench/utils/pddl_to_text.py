@@ -196,6 +196,30 @@ def get_gt_plan_description(config):
 
     return PLAN
 
+def get_gt_plan_description_and_length(config):
+    OBJS = config['encoded_objects']
+    # ----------- PLAN TO TEXT ----------- #
+    PLAN = ""
+    PLAN_LENGTH = 0
+    plan_file = "sas_plan"
+
+    with open(plan_file) as f:
+        plan = [line.rstrip() for line in f][:-1]
+    PLAN_LENGTH = len(plan)
+    for action in plan:
+        action = action.strip("(").strip(")")
+        act_name, objs = action.split(" ")[0], action.split(" ")[1:]
+        if 'obfuscated' in config["domain_name"]:
+            objs = [j.replace('o','object_') for j in objs]
+        elif 'blocksworld' in config['domain_name']:
+            objs = [OBJS[obj] for obj in objs]
+        elif 'logistics' in config['domain_name']:
+            objs = [f"{OBJS[obj[0]].format(*[chr for chr in obj if chr.isdigit()])}" for obj in objs]
+    
+        PLAN += config['actions'][act_name].format(*objs) + "\n"
+
+    return PLAN, PLAN_LENGTH
+
 def get_action_description(config, action):
     OBJS = config['encoded_objects']
     PLAN = ""
