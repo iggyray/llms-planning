@@ -17,7 +17,7 @@ class tot_pipeline:
         self.config = self.get_config()
         self.domain = f'./instances/{self.config["domain_file"]}'
         self.instance_number = instance_number
-        self.instance_dir = self.get_instance_dir(instance_number)
+        self.instance_dir = os.getenv("BLOCKSWORLD3_INSTANCE_DIR").format(instance_number)
         self.problem_description = self.get_problem_description()
         self.problem
         self.tot_state = self.load_json()
@@ -26,10 +26,6 @@ class tot_pipeline:
         config_file_path = os.getenv("BLOCKSWORLD3_CONFIG_DIR")
         with open(config_file_path, 'r') as file:
             return yaml.safe_load(file)
-    
-    def get_instance_dir(self, instance_number):
-        instance_dir = os.getenv("BLOCKSWORLD3_INSTANCE_DIR")
-        return instance_dir.format(instance_number)
     
     def get_gt_plan(self):
         fast_downward_path = os.getenv("FAST_DOWNWARD_DIR")
