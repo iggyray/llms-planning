@@ -79,6 +79,12 @@ class tot_pipeline:
         pddl_action, _ = text_to_plan(llm_raw_response, self.problem.actions, "llm_plan", self.config)
         return get_action_description(self.config, pddl_action)
     
+    def validate_llm_plan(self):
+        text_to_plan(self.tot_state["llm_plan"], self.problem.actions, "llm_plan", self.config) # save plan to plan file
+        result = validate_plan(self.domain, self.instance_dir, 'llm_plan')
+        print('[PLAN VALID]: ' + str(result))
+        return result
+    
     def init_prompt_llama3_80b(self):
         prompt_number = 1
         prompt_with_domain = self.problem_description + exp_init_tot_prompt
