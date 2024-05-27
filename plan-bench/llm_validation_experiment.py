@@ -57,7 +57,7 @@ class llm_validation_experiment:
         else:
             self.report["results"].append(report)
         
-        file_path = "results/blocksworld_3/llm_validation_experiment.json"
+        file_path = "results/blocksworld_3/llm_validation_experiment_3.json"
         with open(file_path, "w") as f:
             json.dump(self.report, f, indent=4)
     
@@ -66,6 +66,7 @@ class llm_validation_experiment:
         prompt_with_domain = self.problem_description + validate_prompt
         response = prompt_llama3_80b(prompt_with_domain)
         validation_line = response.splitlines()[-1].lower()
+        print(f'PROGRESS: {self.instance_number}/101')
         print('[VALIDATE] ' + validation_line)
         report = {
             "instance_number": self.instance_number,
@@ -80,7 +81,58 @@ class llm_validation_experiment:
             report["llm_eval_response"] = False
         self.save_json(report)
 
+class result_compiler:
+    def __init__(self, experiment_number) -> None:
+        self.experiment_number = experiment_number
+        self.results = self.load_results()
+        self.compiled_results = {
+            'length_2': {
+                "passed": 0,
+                "failed": 0,
+                "instances": []
+            },
+            "length_4": {
+                "passed": 0,
+                "failed": 0,
+                "instances": []
+            },
+            "length_6": {
+                "passed": 0,
+                "failed": 0,
+                "instances": []
+            },
+            "length_8": {
+                "passed": 0,
+                "failed": 0,
+                "instances": []
+            },
+        }
+
+    def load_results(self):
+        file_path = f"results/blocksworld_3/llm_validation_experiment_{self.experiment_number}.json"
+        if os.path.exists(file_path):
+            with open(file_path, "r") as f:
+                json_file = json.load(f)
+                return json_file["results"]
+        
+    def save_compiled_results(self):
+        os.makedirs(f"results/blocksworld_3/", exist_ok=True)
+        file_path = f"results/blocksworld_3/compiled_report_{self.experiment_number}.json"
+        with open(file_path, "w") as f:
+            json.dump(self.compiled_results, f, indent=4)
+        
+    def compile_by_gt_plan_length(self):
+        for report in self.results:
+            target_key = f"length_{report['gt_plan_length']}"
+            self.compiled_results[target_key]["instances"].append(report["instance_number"])
+            if report["llm_eval_response"]:
+                self.compiled_results[target_key]["passed"] += 1
+            else:
+                self.compiled_results[target_key]["failed"] += 1
+        
+        self.save_compiled_results()
+
 if __name__=="__main__":
-    for target_instance_number in range(1, 102):
-        exp = llm_validation_experiment(target_instance_number)
-        exp.validate_prompt_llama3_80b()
+    result_compiler = result_compiler(3)
+    result_compiler.compile_by_gt_plan_length()
+    
