@@ -40,7 +40,7 @@ class llm_validation_experiment:
         self.gt_plan, self.gt_plan_length = get_gt_plan_description_and_length(self.config)
     
     def load_json(self):
-        file_path = "results/blocksworld_3/llm_validation_experiment.json"
+        file_path = "results/blocksworld_3/llm_validation_no_delimiters_experiment_3.json"
         if os.path.exists(file_path):
             with open(file_path, "r") as f:
                 return json.load(f)
@@ -57,7 +57,7 @@ class llm_validation_experiment:
         else:
             self.report["results"].append(report)
         
-        file_path = "results/blocksworld_3/llm_validation_experiment_3.json"
+        file_path = "results/blocksworld_3/llm_validation_no_delimiters_experiment_3.json"
         with open(file_path, "w") as f:
             json.dump(self.report, f, indent=4)
     
@@ -89,21 +89,25 @@ class result_compiler:
             'length_2': {
                 "passed": 0,
                 "failed": 0,
+                "pass_rate": 0,
                 "instances": []
             },
             "length_4": {
                 "passed": 0,
                 "failed": 0,
+                "pass_rate": 0,
                 "instances": []
             },
             "length_6": {
                 "passed": 0,
                 "failed": 0,
+                "pass_rate": 0,
                 "instances": []
             },
             "length_8": {
                 "passed": 0,
                 "failed": 0,
+                "pass_rate": 0,
                 "instances": []
             },
         }
@@ -130,9 +134,61 @@ class result_compiler:
             else:
                 self.compiled_results[target_key]["failed"] += 1
         
+        for value in self.compiled_results.values():
+            pass_rate = value["passed"] / (value["passed"] + value["failed"])
+            value["pass_rate"] = round(pass_rate, 3)
+        
+        self.save_compiled_results()
+
+class result_compiler_by_instance:
+    def __init__(self) -> None:
+        self.exp_results = []
+        self.load_instance_results_for_experiment(1)
+        self.load_instance_results_for_experiment(2)
+        self.load_instance_results_for_experiment(3)
+        self.compiled_results = self.load_compiled_results()
+
+    def load_instance_results_for_experiment(self, experiment_number):
+        file_path = f"results/blocksworld_3/llm_validation_experiment_{experiment_number}.json"
+        if os.path.exists(file_path):
+            with open(file_path, "r") as f:
+                json_file = json.load(f)
+                self.exp_results.append(json_file["results"])
+    
+    def load_compiled_results(self):
+        file_path = "results/blocksworld_3/compiled_report_by_instance_number.json"
+        if os.path.exists(file_path):
+            with open(file_path, "r") as f:
+                json_file = json.load(f)
+                return json_file["compiled_results_by_instance_number"]
+        else:
+            return { "compiled_results_by_instance_number": [] }
+        
+    def save_compiled_results(self):
+        os.makedirs(f"results/blocksworld_3/", exist_ok=True)
+        file_path = "results/blocksworld_3/compiled_report_by_instance_number.json"
+        with open(file_path, "w") as f:
+            json.dump(self.compiled_results, f, indent=4)
+        
+    def compile_by_instance_number(self):
+        for instance_number in range(1, 102):
+            instance_array_index = instance_number - 1
+            report = {
+                "instance_number": instance_number,
+                "gt_plan_length": self.exp_results[0][instance_array_index]["gt_plan_length"],
+                "accuracy": 0,
+                "results": []
+            }
+            for exp_number in range(0, 3):
+                result = self.exp_results[exp_number][instance_array_index]["llm_eval_response"]
+                report["results"].append(result)
+                if (result):
+                    report["accuracy"] += 0.33
+            
+            self.compiled_results["compiled_results_by_instance_number"].append(report)
+        
         self.save_compiled_results()
 
 if __name__=="__main__":
-    result_compiler = result_compiler(3)
-    result_compiler.compile_by_gt_plan_length()
-    
+    compiler = result_compiler(3)
+    compiler.compile_by_gt_plan_length()
