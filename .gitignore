@@ -13,6 +13,7 @@ utils/__pycache__/*
 *.DS_Store
 planner_tools/VAL
 .env
+plan-bench/results/blocksworld_3/experiment
 
 
 llm_planning_analysis/configs/mystery_blocksworld_with_mapping.yaml
