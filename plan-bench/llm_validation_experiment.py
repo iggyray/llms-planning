@@ -6,6 +6,9 @@ from tarski.io import PDDLReader
 from utils import *
 from experiments.tot_stepwise import *
 
+# file paths must be configured in env file before execution
+# name-main idiom must be configured before execution
+
 class llm_validation_experiment:
     def __init__(self, instance_number) -> None:
         load_dotenv()
@@ -40,7 +43,7 @@ class llm_validation_experiment:
         self.gt_plan, self.gt_plan_length = get_gt_plan_description_and_length(self.config)
     
     def load_json(self):
-        file_path = "results/blocksworld_3/llm_validation_experiment.json"
+        file_path = os.getenv("TARGET_LOAD_FILE_PATH")
         if os.path.exists(file_path):
             with open(file_path, "r") as f:
                 return json.load(f)
@@ -57,7 +60,7 @@ class llm_validation_experiment:
         else:
             self.report["results"].append(report)
         
-        file_path = "results/blocksworld_3/llm_validation_experiment.json"
+        file_path = os.getenv("TARGET_SAVE_FILE_PATH")
         with open(file_path, "w") as f:
             json.dump(self.report, f, indent=4)
     
@@ -66,6 +69,7 @@ class llm_validation_experiment:
         prompt_with_domain = self.problem_description + validate_prompt
         response = prompt_llama3_80b(prompt_with_domain)
         validation_line = response.splitlines()[-1].lower()
+        print(f'PROGRESS: {self.instance_number}/101')
         print('[VALIDATE] ' + validation_line)
         report = {
             "instance_number": self.instance_number,
@@ -80,7 +84,109 @@ class llm_validation_experiment:
             report["llm_eval_response"] = False
         self.save_json(report)
 
+class result_compiler:
+    def __init__(self, experiment_number) -> None:
+        load_dotenv()
+        self.experiment_number = experiment_number
+        self.results = self.load_results()
+        self.compiled_results = {
+            'length_2': {
+                "passed": 0,
+                "failed": 0,
+                "pass_rate": 0,
+                "instances": []
+            },
+            "length_4": {
+                "passed": 0,
+                "failed": 0,
+                "pass_rate": 0,
+                "instances": []
+            },
+            "length_6": {
+                "passed": 0,
+                "failed": 0,
+                "pass_rate": 0,
+                "instances": []
+            },
+            "length_8": {
+                "passed": 0,
+                "failed": 0,
+                "pass_rate": 0,
+                "instances": []
+            },
+        }
+
+    def load_results(self):
+        file_path = os.getenv("TARGET_LOAD_FILE_PATH")
+        file_path.format(self.experiment_number)
+        if os.path.exists(file_path):
+            with open(file_path, "r") as f:
+                json_file = json.load(f)
+                return json_file["results"]
+        
+    def save_compiled_results(self):
+        os.makedirs(f"results/blocksworld_3/", exist_ok=True)
+        file_path = os.getenv("TARGET_SAVE_FILE_PATH")
+        file_path.format(self.experiment_number)
+        with open(file_path, "w") as f:
+            json.dump(self.compiled_results, f, indent=4)
+        
+    def compile_by_gt_plan_length(self):
+        for report in self.results:
+            target_key = f"length_{report['gt_plan_length']}"
+            self.compiled_results[target_key]["instances"].append(report["instance_number"])
+            if report["llm_eval_response"]:
+                self.compiled_results[target_key]["passed"] += 1
+            else:
+                self.compiled_results[target_key]["failed"] += 1
+        
+        for value in self.compiled_results.values():
+            pass_rate = value["passed"] / (value["passed"] + value["failed"])
+            value["pass_rate"] = round(pass_rate, 3)
+        
+        self.save_compiled_results()
+
+class result_compiler_by_instance:
+    def __init__(self) -> None:
+        load_dotenv()
+        self.exp_results = []
+        self.load_instance_results_for_experiment(1)
+        self.load_instance_results_for_experiment(2)
+        self.load_instance_results_for_experiment(3)
+        self.compiled_results = { "compiled_results_by_instance_number": [] }
+
+    def load_instance_results_for_experiment(self, experiment_number):
+        file_path = os.getenv("TARGET_LOAD_FILE_PATH")
+        file_path.format(experiment_number)
+        if os.path.exists(file_path):
+            with open(file_path, "r") as f:
+                json_file = json.load(f)
+                self.exp_results.append(json_file["results"])
+    
+    def save_compiled_results(self):
+        os.makedirs(f"results/blocksworld_3/", exist_ok=True)
+        file_path = os.getenv("TARGET_LOAD_FILE_PATH")
+        with open(file_path, "w") as f:
+            json.dump(self.compiled_results, f, indent=4)
+        
+    def compile_by_instance_number(self):
+        for instance_number in range(1, 102):
+            instance_array_index = instance_number - 1
+            report = {
+                "instance_number": instance_number,
+                "gt_plan_length": self.exp_results[0][instance_array_index]["gt_plan_length"],
+                "accuracy": 0,
+                "results": []
+            }
+            for exp_number in range(0, 3):
+                result = self.exp_results[exp_number][instance_array_index]["llm_eval_response"]
+                report["results"].append(result)
+                if (result):
+                    report["accuracy"] += 0.33
+            
+            self.compiled_results["compiled_results_by_instance_number"].append(report)
+        
+        self.save_compiled_results()
+
 if __name__=="__main__":
-    for target_instance_number in range(1, 102):
-        exp = llm_validation_experiment(target_instance_number)
-        exp.validate_prompt_llama3_80b()
+    pass
