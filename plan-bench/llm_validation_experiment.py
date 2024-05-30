@@ -6,6 +6,9 @@ from tarski.io import PDDLReader
 from utils import *
 from experiments.tot_stepwise import *
 
+# file paths must be configured in env file before execution
+# name-main idiom must be configured before execution
+
 class llm_validation_experiment:
     def __init__(self, instance_number) -> None:
         load_dotenv()
@@ -40,7 +43,7 @@ class llm_validation_experiment:
         self.gt_plan, self.gt_plan_length = get_gt_plan_description_and_length(self.config)
     
     def load_json(self):
-        file_path = "results/blocksworld_3/llm_validation_no_delimiters_experiment_3.json"
+        file_path = os.getenv("TARGET_LOAD_FILE_PATH")
         if os.path.exists(file_path):
             with open(file_path, "r") as f:
                 return json.load(f)
@@ -57,7 +60,7 @@ class llm_validation_experiment:
         else:
             self.report["results"].append(report)
         
-        file_path = "results/blocksworld_3/llm_validation_no_delimiters_experiment_3.json"
+        file_path = os.getenv("TARGET_SAVE_FILE_PATH")
         with open(file_path, "w") as f:
             json.dump(self.report, f, indent=4)
     
@@ -83,6 +86,7 @@ class llm_validation_experiment:
 
 class result_compiler:
     def __init__(self, experiment_number) -> None:
+        load_dotenv()
         self.experiment_number = experiment_number
         self.results = self.load_results()
         self.compiled_results = {
@@ -113,7 +117,8 @@ class result_compiler:
         }
 
     def load_results(self):
-        file_path = f"results/blocksworld_3/llm_validation_experiment_{self.experiment_number}.json"
+        file_path = os.getenv("TARGET_LOAD_FILE_PATH")
+        file_path.format(self.experiment_number)
         if os.path.exists(file_path):
             with open(file_path, "r") as f:
                 json_file = json.load(f)
@@ -121,7 +126,8 @@ class result_compiler:
         
     def save_compiled_results(self):
         os.makedirs(f"results/blocksworld_3/", exist_ok=True)
-        file_path = f"results/blocksworld_3/compiled_report_{self.experiment_number}.json"
+        file_path = os.getenv("TARGET_SAVE_FILE_PATH")
+        file_path.format(self.experiment_number)
         with open(file_path, "w") as f:
             json.dump(self.compiled_results, f, indent=4)
         
@@ -142,31 +148,24 @@ class result_compiler:
 
 class result_compiler_by_instance:
     def __init__(self) -> None:
+        load_dotenv()
         self.exp_results = []
         self.load_instance_results_for_experiment(1)
         self.load_instance_results_for_experiment(2)
         self.load_instance_results_for_experiment(3)
-        self.compiled_results = self.load_compiled_results()
+        self.compiled_results = { "compiled_results_by_instance_number": [] }
 
     def load_instance_results_for_experiment(self, experiment_number):
-        file_path = f"results/blocksworld_3/llm_validation_experiment_{experiment_number}.json"
+        file_path = os.getenv("TARGET_LOAD_FILE_PATH")
+        file_path.format(experiment_number)
         if os.path.exists(file_path):
             with open(file_path, "r") as f:
                 json_file = json.load(f)
                 self.exp_results.append(json_file["results"])
     
-    def load_compiled_results(self):
-        file_path = "results/blocksworld_3/compiled_report_by_instance_number.json"
-        if os.path.exists(file_path):
-            with open(file_path, "r") as f:
-                json_file = json.load(f)
-                return json_file["compiled_results_by_instance_number"]
-        else:
-            return { "compiled_results_by_instance_number": [] }
-        
     def save_compiled_results(self):
         os.makedirs(f"results/blocksworld_3/", exist_ok=True)
-        file_path = "results/blocksworld_3/compiled_report_by_instance_number.json"
+        file_path = os.getenv("TARGET_LOAD_FILE_PATH")
         with open(file_path, "w") as f:
             json.dump(self.compiled_results, f, indent=4)
         
@@ -190,5 +189,4 @@ class result_compiler_by_instance:
         self.save_compiled_results()
 
 if __name__=="__main__":
-    compiler = result_compiler(3)
-    compiler.compile_by_gt_plan_length()
+    pass
