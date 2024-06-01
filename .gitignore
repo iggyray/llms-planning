@@ -14,6 +14,7 @@ utils/__pycache__/*
 planner_tools/VAL
 .env
 plan-bench/results/blocksworld_3/experiment
+plan-bench/prompts/blocksworld_3_tot/
 
 
 llm_planning_analysis/configs/mystery_blocksworld_with_mapping.yaml
