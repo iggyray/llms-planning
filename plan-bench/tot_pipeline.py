@@ -78,11 +78,50 @@ class tot_pipeline:
         pddl_action, _ = text_to_plan(llm_raw_response, self.problem.actions, "llm_plan", self.config)
         return get_action_description(self.config, pddl_action)
     
+    def load_validation_report_json(self):
+        file_name = os.getenv("VALIDATION_REPORT_FILE_NAME")
+        if os.path.exists(f"results/blocksworld_3/" + file_name):
+            with open(f"results/blocksworld_3/" + file_name, "r") as f:
+                return json.load(f)
+        else:
+            structured_output = {
+                                "results": [],
+                                }
+            return structured_output
+        
+    def save_validation_report_json(self, updated_report):
+        os.makedirs("results/blocksworld_3/", exist_ok=True)
+        file_name = os.getenv("VALIDATION_REPORT_FILE_NAME")
+        with open(f"results/blocksworld_3/" + file_name, "w") as f:
+            json.dump(updated_report, f, indent=4)
+    
     def validate_llm_plan(self):
         text_to_plan(self.tot_state["llm_plan"], self.problem.actions, "llm_plan", self.config) # save plan to plan file
         result = validate_plan(self.domain, self.instance_dir, 'llm_plan')
         print('[PLAN VALID]: ' + str(result))
-        return result
+        if (result):
+            self.report_passed_instance()
+        else:
+            self.report_failed_instance("invalid plan")
+
+    def report_failed_instance(self, error_message):
+        instance_report = {
+            "instance_number": self.instance_number,
+            "pass": False,
+            "details": error_message
+        }
+        validation_report = self.load_validation_report_json()
+        validation_report["results"].append(instance_report)
+        self.save_validation_report_json(validation_report)
+    
+    def report_passed_instance(self):
+        instance_report = {
+            "instance_number": self.instance_number,
+            "pass": True,
+        }
+        validation_report = self.load_validation_report_json()
+        validation_report["results"].append(instance_report)
+        self.save_validation_report_json(validation_report)
     
     def init_prompt_llama3_80b(self):
         prompt_number = 1
@@ -158,12 +197,23 @@ class tot_pipeline:
         }
         self.save_json(prompt_number, report)
 
-        if ("does not" in validation_line):
+        if ("does not" in validation_line and math.ceil(prompt_number/3) < self.gt_plan_length * 2):
             self.tot_prompt_llama3_80b(prompt_number + 1)
         else:
-            return self.validate_llm_plan()
+            return
     
 if __name__=="__main__":
-    target_instance_number = 30
-    tot = tot_pipeline(target_instance_number)
-    tot.init_prompt_llama3_80b()
+    target_instances = []
+
+    try:
+        for index, target_instance_number in enumerate(target_instances, start=1):
+            print(f'[INSTANCE NUMBER]: {target_instance_number} || [PROGRESS]: {index} / {len(target_instances)}')
+            tot = tot_pipeline(target_instance_number)
+            try:
+                tot.init_prompt_llama3_80b()
+                tot.validate_llm_plan()
+            except:
+                print('SYNTAX ERROR')
+                tot.report_failed_instance("syntax error")
+    except KeyboardInterrupt:
+        print("\nProcess interrupted by user. Exiting...")
