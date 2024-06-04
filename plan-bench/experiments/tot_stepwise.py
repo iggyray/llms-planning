@@ -8,12 +8,19 @@ problem = '<initial-state>As initial conditions I have that, the red block is cl
 
 exp_tot_prompt = '<plan> {} </plan>\n\nConsidering the goal state and the current plan, explain 2 possible actions for step {} then conclude in the last line "The possible actions are: 1. <a> 2. <b>" where a, b are your explained actions.'
 
+exp_tot_prompt_v2 = '<plan> {} </plan>\n\nConsidering the goal state and the current plan, explain up to 2 possible actions for the next action that can progress the plan towards the goal state, then conclude in the last line "The possible actions are: 1. <a> 2. <b> (optional)". The actions you propose must be valid and must contain the keywords described in the <domain> actions (e.g. stack and unstack etc).'
+
 exp_vote_prompt = '<plan> {} </plan>\n\nHere are choices for step {}: {}\n\nDecide which choice is most promising in reaching the goal state. Analyze each choice in detail, then conclude in the last line "The best choice is <>" where <> is the chosen choice.'
+
+exp_vote_prompt_v2 = '<plan> {} </plan>\n\nHere are choices for the next action in the plan: {}\n\nDecide which action is valid and can progress the plan towards the goal state. Analyze each action in detail, then conclude in the last line "The best action is <action>"'
 
 exp_validate_prompt = 'Plan:\n{}\n\nDoes the plan satisfy the goal state? Analyze the plan in detail, then conclude in the last line "The plan <does/ does not> satisfy the goal state".'
 
+exp_validate_prompt_v2 = 'Plan:\n{}\n\nWhen I execute this plan from the initial state, will I reach the goal state? Analyze the plan in detail, then conclude in the last line "The plan <does/ does not> satisfy the goal state".'
+
 exp_init_tot_prompt = 'What are 2 possible actions for step 1 in reaching the goal state? Explain your actions, then conclude in the last line "The possible actions are: 1. {a} 2. {b}" where a, b are the possible actions.'
 # The possible actions are: 1. Pick up the red block 2. Unstack the blue block from on top of another block 3. Pick up the orange block
+exp_init_tot_prompt_v2 = 'What are 2 possible actions for step 1 of a plan in reaching the goal state? Explain your actions, then conclude in the last line "The possible actions are: 1. {a} 2. {b}". a and b must be valid actions, and must contain the keywords described in the <domain> actions.'
 
 vote_prompt_1 = 'Here are choices for the 1st step:\n1. Pick up the red block\n2. Unstack the blue block from on top of another block\n3. Pick up the orange block\n\nDecide which choice is most promising in reaching the goal state. Analyze each choice in detail, then conclude in the last line "The best choice is {s}" where s is the chosen choice.'
 # The best choice is 1. Pick up the red block
