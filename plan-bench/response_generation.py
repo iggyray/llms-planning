@@ -95,15 +95,15 @@ class ResponseGenerator:
     def get_responses_v2(self, task_name, target_instances):
         output_dir = f"responses/{self.data['domain_name']}/{self.engine}/"
         os.makedirs(output_dir, exist_ok=True)
-        output_json = output_dir+f"base_{task_name}.json"
+        output_json = output_dir + f"{task_name}.json"
 
         if os.path.exists(output_json):
             with open(output_json, 'r') as file:
                 structured_output = json.load(file)
         else:
             prompt_dir = f"prompts/{self.data['domain_name']}/"
-            assert os.path.exists(prompt_dir+f"base_{task_name}.json")
-            with open(prompt_dir+f"base_{task_name}.json", 'r') as file:
+            assert os.path.exists(prompt_dir+"base_task_1_plan_generation.json")
+            with open(prompt_dir+"base_task_1_plan_generation.json", 'r') as file:
                 structured_output = json.load(file)
             structured_output['engine'] = self.engine
     
