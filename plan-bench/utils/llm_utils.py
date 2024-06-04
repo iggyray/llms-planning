@@ -55,6 +55,13 @@ def send_query(query, engine, max_tokens, model=None, stop="[STATEMENT]"):
             except Exception as e:
                 print("failed to query llama3 with ollama")
             return response
+    elif engine == "llama3-80b":
+        if model:
+            try:
+                response = prompt_llama3_80b(query)
+            except Exception as e:
+                print("failed to query llama3 with ollama")
+            return response
     else:
         print("invalid engine")
         return ""
