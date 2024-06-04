@@ -20,9 +20,13 @@ class ResponseGenerator:
             model = 'llama2'
             self.engine='llama2'
             self.model = {'model':model}
-        elif 'llama3' in self.engine:
+        elif self.engine == 'llama3':
             model = 'llama3'
             self.engine='llama3'
+            self.model = {'model':model}
+        elif self.engine == 'llama3-80b':
+            model = 'llama3-80b'
+            self.engine='llama3-80b'
             self.model = {'model':model}
         else:
             self.model = None
@@ -88,28 +92,26 @@ class ResponseGenerator:
             else:
                 break
 
-    def get_response(self, task_name, target_instance_number):
+    def get_responses_v2(self, task_name, target_instances):
         output_dir = f"responses/{self.data['domain_name']}/{self.engine}/"
         os.makedirs(output_dir, exist_ok=True)
-        output_json = output_dir+f"{task_name}.json"
+        output_json = output_dir+f"base_{task_name}.json"
 
         if os.path.exists(output_json):
             with open(output_json, 'r') as file:
                 structured_output = json.load(file)
         else:
             prompt_dir = f"prompts/{self.data['domain_name']}/"
-            assert os.path.exists(prompt_dir+f"{task_name}.json")
-            with open(prompt_dir+f"{task_name}.json", 'r') as file:
+            assert os.path.exists(prompt_dir+f"base_{task_name}.json")
+            with open(prompt_dir+f"base_{task_name}.json", 'r') as file:
                 structured_output = json.load(file)
             structured_output['engine'] = self.engine
     
         failed_instances = []
 
-        instance_array_index = target_instance_number - 1
-
-        single_target_instance = [structured_output["instances"][instance_array_index]]
-
-        for instance in tqdm(single_target_instance):
+        for target_instance_number in tqdm(target_instances):
+            instance_array_index = target_instance_number - 1
+            instance = structured_output["instances"][instance_array_index]
             if "llm_raw_response" in instance:
                 if instance["llm_raw_response"] and not self.ignore_existing:
                     continue             
@@ -151,6 +153,7 @@ if __name__=="__main__":
                         \n ada = GPT-3 Ada \
                         \n llama2 = llama2 \
                         \n llama3 = llama3 \
+                        \n llama3-80b = llama3-80b \
                         ')
                         
     parser.add_argument('--verbose', type=str, default="False", help='Verbose')
@@ -192,7 +195,7 @@ if __name__=="__main__":
         task_name = task_dict[task]
     except:
         raise ValueError("Invalid task name")
-    response_generator.get_response(task_name, target_instance)
+    response_generator.get_responses(task_name, target_instance)
 
 
 
