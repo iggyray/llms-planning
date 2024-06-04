@@ -90,8 +90,9 @@ class PromptGenerator:
     
         # ========================================== TASKS ========================================== #
     def task_1_plan_generation_v2(self, target_instance):
-        task_name = f"task_1_plan_generation"
-        structured_output = self.load_json(task_name)
+        task_name = "task_1_plan_generation"
+        file_name = "base_task_1_plan_generation"
+        structured_output = self.load_json(file_name)
         
         if structured_output is None:
             structured_output = {
@@ -106,21 +107,19 @@ class PromptGenerator:
             return
         
         query = self.data["domain_intro"]
-        examples = []
 
         # add example problem & answer to query
-        example_instance_id = target_instance
-        examples.append(example_instance_id)
+        example_instance_id = target_instance + 1
         example_instance = self.instance.format(example_instance_id)
         example_problem = self.get_problem(example_instance, self.domain_pddl)
         example_gt_plan = self.compute_plan(self.domain_pddl, example_instance)
-        query += fill_template(*instance_to_text(example_problem, example_gt_plan, self.data))
+        query += fill_template_v1(*instance_to_text(example_problem, example_gt_plan, self.data))
 
         # add cur problem to query
-        cur_instance_id = example_instance_id + 1
+        cur_instance_id = target_instance
         cur_instance = self.instance.format(cur_instance_id)
         cur_problem = self.get_problem(cur_instance, self.domain_pddl)
-        query += fill_template(*instance_to_text(cur_problem, "", self.data), True)
+        query += fill_template_v1(*instance_to_text(cur_problem, "", self.data), True)
 
         # gen ground truth plan
         self.compute_plan(self.domain_pddl, cur_instance)
@@ -128,7 +127,7 @@ class PromptGenerator:
         
         instance_structured_output = {}
         instance_structured_output["instance_id"] = cur_instance_id
-        instance_structured_output["example_instance_ids"] = examples
+        instance_structured_output["example_instance_id"] = example_instance_id
         instance_structured_output["query"] = query
         instance_structured_output["ground_truth_plan"] = gt_plan_text
 
@@ -137,7 +136,7 @@ class PromptGenerator:
         else:
             instance_array_index = target_instance - 1
             structured_output["instances"][instance_array_index] = instance_structured_output
-        self.save_json(task_name, structured_output)
+        self.save_json(file_name, structured_output)
 
     def task_1_plan_generation(self, specified_instances=[], random_example=False):
         task_name = f"task_1_plan_generation"

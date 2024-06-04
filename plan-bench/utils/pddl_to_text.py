@@ -57,6 +57,22 @@ def parse_problem(problem, data, shuffle):
     return INIT, GOAL
 
 
+def fill_template_v1(INIT, GOAL, PLAN, data, instruction=False):
+    text = ""
+    if INIT != "":
+        text += "\n[STATEMENT]\n"
+        text += f"As initial conditions I have that, {INIT.strip()}."
+    if GOAL != "":
+        text += f"\nMy goal is to have that {GOAL}."
+    if not instruction:
+        text += f"\n\nMy plan is as follows:\n\n[PLAN]{PLAN}"
+    else:
+        text += f"\n\nWhat is the plan to achieve my goal? Just give the actions in the plan."
+
+    # TODO: Add this replacement to the yml file -- Use "Translations" dict in yml
+    if 'blocksworld' in data['domain_name']:
+        text = text.replace("-", " ").replace("ontable", "on the table")
+    return text
 
 
 def fill_template(INIT, GOAL, PLAN, data, instruction=False):
