@@ -18,6 +18,8 @@ plan-bench/prompts/blocksworld_3_tot/
 plan-bench/prompts/blocksworld_3/base_task_1_plan_generation.json
 plan-bench/responses/blocksworld_3/llama3-80b/
 plan-bench/results/blocksworld_3/llama3-80b/
+plan-bench/prompts/blocksworld_3_tot_one_shot/
+plan-bench/results/blocksworld_3/*.json
 
 
 llm_planning_analysis/configs/mystery_blocksworld_with_mapping.yaml

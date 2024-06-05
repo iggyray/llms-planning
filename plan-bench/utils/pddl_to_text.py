@@ -189,6 +189,25 @@ def get_problem_description(INIT, GOAL, config):
         description = description.replace("-", " ").replace("ontable", "on the table")
     return description
 
+def get_domain_description_with_example(INIT, GOAL, config):
+    description = f'<domain>{config["domain_intro"]}</domain>\n<example>\n'
+    if INIT != "":
+        description += f"<initial-state>As initial conditions I have that, {INIT.strip()}.</initial-state>\n"
+    if GOAL != "":
+        description += f"<goal-state>My goal is to have that {GOAL.strip()}.</goal-state>\n"
+    description += "Here is a valid example plan that will achieve the goal state from the initial state: <plan>\n"
+    description += get_gt_plan_description(config)
+    description += "</plan>\n</example>"
+    return description
+
+def get_problem_description_only(INIT, GOAL, config):
+    description = "\n"
+    if INIT != "":
+        description += f"<initial-state>As initial conditions I have that, {INIT.strip()}.</initial-state>\n"
+    if GOAL != "":
+        description += f"<goal-state>My goal is to have that {GOAL.strip()}.</goal-state>\n"
+    return description
+
 def get_gt_plan_description(config):
     OBJS = config['encoded_objects']
     # ----------- PLAN TO TEXT ----------- #
