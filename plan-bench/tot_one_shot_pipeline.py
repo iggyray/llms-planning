@@ -66,12 +66,12 @@ class tot_one_shot_pipeline:
             structured_output = {
                                 "problem_description": self.problem_description,
                                 "gt_plan": self.gt_plan,
-                                "llm_plan": "",
+                                "llm_plan": [],
                                 "prompts": [],
                                 }
             return structured_output
     
-    def save_json(self, prompt_number, prompt_report, updated_plan=None):
+    def save_json(self, prompt_number, prompt_report, next_action=None):
         os.makedirs(f"prompts/blocksworld_3_tot_one_shot/", exist_ok=True)
 
         is_prompt_report_exists = len(self.tot_state["prompts"]) >= prompt_number
@@ -81,8 +81,8 @@ class tot_one_shot_pipeline:
         else:
             self.tot_state["prompts"].append(prompt_report)
 
-        if (updated_plan is not None):
-            self.tot_state["llm_plan"] = updated_plan
+        if (next_action is not None):
+            self.tot_state["llm_plan"].append(next_action)
         file_name = f'instance-{self.instance_number}'
         with open(f"prompts/blocksworld_3_tot_one_shot/" + file_name + ".json", "w") as f:
             json.dump(self.tot_state, f, indent=4)
@@ -109,7 +109,8 @@ class tot_one_shot_pipeline:
             json.dump(updated_report, f, indent=4)
     
     def validate_llm_plan(self):
-        text_to_plan(self.tot_state["llm_plan"], self.problem.actions, "llm_plan", self.config) # save plan to plan file
+        llm_plan = ''.join(self.tot_state["llm_plan"])
+        text_to_plan(llm_plan, self.problem.actions, "llm_plan", self.config) # save plan to plan file
         result = validate_plan(self.domain, self.instance_dir, 'llm_plan')
         print('[PLAN VALID]: ' + str(result))
         if (result):
@@ -151,7 +152,8 @@ class tot_one_shot_pipeline:
         self.vote_prompt_llama3_80b(prompt_number + 1)
 
     def tot_prompt_llama3_80b(self, prompt_number):
-        prompt = exp_tot_prompt_v2.format(self.tot_state["llm_plan"])
+        llm_plan = ''.join(self.tot_state["llm_plan"])
+        prompt = exp_tot_prompt_v2.format(llm_plan)
         prompt_with_domain = self.problem_description + prompt
         response = prompt_llama3_80b(prompt_with_domain)
         possible_actions = response.split("The possible actions are: ")[-1]
@@ -173,8 +175,8 @@ class tot_one_shot_pipeline:
             "prompt": 'NO PROMPT AS ONLY 1 OPTION WAS PROVIDED',
             "response": possible_actions,
             }
-            updated_plan = self.tot_state["llm_plan"] + self.get_llm_action_description(possible_actions)
-            self.save_json(prompt_number + 1, vote_report, updated_plan)
+            new_action = self.get_llm_action_description(possible_actions)
+            self.save_json(prompt_number + 1, vote_report, new_action)
             self.validate_prompt_llama3_80b(prompt_number + 2)
 
     def vote_prompt_llama3_80b(self, prompt_number):
@@ -196,7 +198,8 @@ class tot_one_shot_pipeline:
         self.validate_prompt_llama3_80b(prompt_number + 1)
 
     def validate_prompt_llama3_80b(self, prompt_number):
-        validate_prompt = exp_validate_prompt_v2.format(self.tot_state["llm_plan"])
+        llm_plan = ''.join(self.tot_state["llm_plan"])
+        validate_prompt = exp_validate_prompt_v2.format(llm_plan)
         prompt_with_domain = self.problem_description + validate_prompt
         response = prompt_llama3_80b(prompt_with_domain)
         validation_line = response.splitlines()[-1].lower()
