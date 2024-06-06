@@ -182,20 +182,30 @@ class tot_one_shot_pipeline:
     def vote_prompt_llama3_80b(self, prompt_number):
         tot_prompt_index = prompt_number - 2
         possible_actions = self.tot_state["prompts"][tot_prompt_index]["response"]
-        vote_prompt = exp_vote_prompt_v2.format(self.tot_state["llm_plan"], possible_actions)
+        llm_plan = ''.join(self.tot_state["llm_plan"])
+        vote_prompt = exp_vote_prompt_v2.format(llm_plan, possible_actions)
         prompt_with_domain = self.problem_description + vote_prompt
-        response = prompt_llama3_80b(prompt_with_domain)
-        voted_action = response.lower().split("the best action is")[-1].replace('*', '')
-        print("[VOTE] " + voted_action)
-        updated_plan = self.tot_state["llm_plan"] + self.get_llm_action_description(voted_action)
-        report = {
-            "prompt_number": prompt_number,
-            "type": 'vote',
-            "prompt": vote_prompt,
-            "response": voted_action,
-        }
-        self.save_json(prompt_number, report, updated_plan)
-        self.validate_prompt_llama3_80b(prompt_number + 1)
+        retry_count = 0
+        while retry_count < 3:
+            try:
+                response = prompt_llama3_80b(prompt_with_domain)
+                voted_action = response.lower().split("the best action is")[-1].replace('*', '')
+                print("[VOTE] " + voted_action)
+                new_action = self.get_llm_action_description(voted_action)
+                report = {
+                    "prompt_number": prompt_number,
+                    "type": 'vote',
+                    "prompt": vote_prompt,
+                    "response": voted_action,
+                }
+                retry_count += 3 # exit while loop
+                self.save_json(prompt_number, report, new_action)
+                self.validate_prompt_llama3_80b(prompt_number + 1)
+            except Exception:
+                retry_count += 1
+                if (retry_count == 3):
+                    raise Exception
+                print('SYNTAX ERROR, RETRYING')
 
     def validate_prompt_llama3_80b(self, prompt_number):
         llm_plan = ''.join(self.tot_state["llm_plan"])
