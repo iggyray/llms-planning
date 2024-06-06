@@ -16,7 +16,7 @@ exp_vote_prompt_v2 = '<plan> {} </plan>\n\nHere are choices for the next action 
 
 exp_validate_prompt = 'Plan:\n{}\n\nDoes the plan satisfy the goal state? Analyze the plan in detail, then conclude in the last line "The plan <does/ does not> satisfy the goal state".'
 
-exp_validate_prompt_v2 = 'Plan:\n{}\n\nWhen I execute this plan from the initial state, will I reach the goal state? Analyze the plan in detail, then conclude in the last line "The plan <does/ does not> satisfy the goal state".'
+exp_validate_prompt_v2 = 'Plan:\n{}\nWhen I execute this plan from the initial state, will I reach the goal state? Analyze the plan in detail, then conclude in the last line "The plan <does/ does not> satisfy the goal state".'
 
 exp_init_tot_prompt = 'What are 2 possible actions for step 1 in reaching the goal state? Explain your actions, then conclude in the last line "The possible actions are: 1. {a} 2. {b}" where a, b are the possible actions.'
 # The possible actions are: 1. Pick up the red block 2. Unstack the blue block from on top of another block 3. Pick up the orange block

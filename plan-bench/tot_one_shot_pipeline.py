@@ -71,7 +71,7 @@ class tot_one_shot_pipeline:
                                 }
             return structured_output
     
-    def save_json(self, prompt_number, prompt_report, next_action=None):
+    def save_json(self, prompt_number, prompt_report, next_action=None, reset_llm_plan=False):
         os.makedirs(f"prompts/blocksworld_3_tot_one_shot/", exist_ok=True)
 
         is_prompt_report_exists = len(self.tot_state["prompts"]) >= prompt_number
@@ -83,6 +83,9 @@ class tot_one_shot_pipeline:
 
         if (next_action is not None):
             self.tot_state["llm_plan"].append(next_action)
+        
+        if (reset_llm_plan):
+            self.tot_state["llm_plan"] = []
         file_name = f'instance-{self.instance_number}'
         with open(f"prompts/blocksworld_3_tot_one_shot/" + file_name + ".json", "w") as f:
             json.dump(self.tot_state, f, indent=4)
@@ -148,7 +151,8 @@ class tot_one_shot_pipeline:
             "response": possible_actions
         }
         print("[INIT] " + possible_actions)
-        self.save_json(prompt_number, report,  '')
+        reset_llm_plan = True
+        self.save_json(prompt_number, report,  None, reset_llm_plan)
         self.vote_prompt_llama3_80b(prompt_number + 1)
 
     def tot_prompt_llama3_80b(self, prompt_number):
