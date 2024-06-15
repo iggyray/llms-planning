@@ -1,28 +1,25 @@
 import math
 from dotenv import load_dotenv
 import os
-import json
 from utils import *
 from experiments.tot_stepwise import *
 from setup_handler import setup_handler
 from report_handler import report_handler
+from validation_handler import validation_handler
 
 class tot_one_shot_pipeline:
     def __init__(self, instance_number) -> None:
         load_dotenv()
         setup = setup_handler(instance_number)
         self.config = setup.get_config()
-        self.problem = setup.get_problem()
-        self.instance_number = instance_number
-        self.instance_dir = self.get_instance_dir(instance_number)
         self.domain = f'./instances/{self.config["domain_file"]}'
+        self.problem = setup.get_problem()
+        self.instance_dir = os.getenv("BLOCKSWORLD3_INSTANCE_DIR").format(instance_number)
         self.gt_plan, self.gt_plan_length = setup.get_gt_plan()
         self.problem_description = setup.get_one_shot_problem_description()
+        self.validator = validation_handler(self.config, self.domain, self.problem, instance_number, self.instance_dir)
         self.reporter = report_handler(instance_number, self.problem_description, self.gt_plan)
         self.tot_state = self.reporter.load_json()
-    
-    def get_instance_dir(self, instance_number):
-        return os.getenv("BLOCKSWORLD3_INSTANCE_DIR").format(instance_number)
     
     def update_tot_state(self, prompt_number, prompt_report, next_action=None, reset_llm_plan=False):
         self.reporter.save_json(prompt_number, prompt_report, next_action, reset_llm_plan)
@@ -31,52 +28,6 @@ class tot_one_shot_pipeline:
     def get_llm_action_description(self, llm_raw_response):
         pddl_action, _ = text_to_plan(llm_raw_response, self.problem.actions, "llm_plan", self.config)
         return get_action_description(self.config, pddl_action)
-    
-    def load_validation_report_json(self):
-        file_name = os.getenv("TOT_ONE_SHOT_VALIDATION_REPORT_FILE_NAME")
-        if os.path.exists(f"results/blocksworld_3/" + file_name):
-            with open(f"results/blocksworld_3/" + file_name, "r") as f:
-                return json.load(f)
-        else:
-            structured_output = {
-                                "results": [],
-                                }
-            return structured_output
-        
-    def save_validation_report_json(self, updated_report):
-        os.makedirs("results/blocksworld_3/", exist_ok=True)
-        file_name = os.getenv("TOT_ONE_SHOT_VALIDATION_REPORT_FILE_NAME")
-        with open(f"results/blocksworld_3/" + file_name, "w") as f:
-            json.dump(updated_report, f, indent=4)
-    
-    def validate_llm_plan(self):
-        llm_plan = ''.join(self.tot_state["llm_plan"])
-        text_to_plan(llm_plan, self.problem.actions, "llm_plan", self.config) # save plan to plan file
-        result = validate_plan(self.domain, self.instance_dir, 'llm_plan')
-        print('[PLAN VALID]: ' + str(result))
-        if (result):
-            self.report_passed_instance()
-        else:
-            self.report_failed_instance("invalid plan")
-
-    def report_failed_instance(self, error_message):
-        instance_report = {
-            "instance_number": self.instance_number,
-            "pass": False,
-            "details": error_message
-        }
-        validation_report = self.load_validation_report_json()
-        validation_report["results"].append(instance_report)
-        self.save_validation_report_json(validation_report)
-    
-    def report_passed_instance(self):
-        instance_report = {
-            "instance_number": self.instance_number,
-            "pass": True,
-        }
-        validation_report = self.load_validation_report_json()
-        validation_report["results"].append(instance_report)
-        self.save_validation_report_json(validation_report)
     
     def init_prompt_llama3_80b(self):
         prompt_number = 1
@@ -167,7 +118,7 @@ class tot_one_shot_pipeline:
         if ("does not" in validation_line and math.ceil(prompt_number/3) < self.gt_plan_length * 2):
             self.tot_prompt_llama3_80b(prompt_number + 1)
         else:
-            return
+            self.validator.validate_llm_plan(llm_plan, True)
     
 if __name__=="__main__":
     target_instances = []
@@ -178,7 +129,6 @@ if __name__=="__main__":
             tot = tot_one_shot_pipeline(target_instance_number)
             try:
                 tot.init_prompt_llama3_80b()
-                tot.validate_llm_plan()
             except:
                 print('SYNTAX ERROR')
                 tot.report_failed_instance("syntax error")
