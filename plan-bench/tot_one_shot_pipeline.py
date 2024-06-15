@@ -5,6 +5,7 @@ import json
 from utils import *
 from experiments.tot_stepwise import *
 from setup_handler import setup_handler
+from report_handler import report_handler
 
 class tot_one_shot_pipeline:
     def __init__(self, instance_number) -> None:
@@ -13,47 +14,19 @@ class tot_one_shot_pipeline:
         self.config = setup.get_config()
         self.problem = setup.get_problem()
         self.instance_number = instance_number
-        self.instance_dir = self.get_instance_dir(instance_number) # no need
+        self.instance_dir = self.get_instance_dir(instance_number)
         self.domain = f'./instances/{self.config["domain_file"]}'
         self.gt_plan, self.gt_plan_length = setup.get_gt_plan()
         self.problem_description = setup.get_one_shot_problem_description()
-        self.tot_state = self.load_json()
+        self.reporter = report_handler(instance_number, self.problem_description, self.gt_plan)
+        self.tot_state = self.reporter.load_json()
     
     def get_instance_dir(self, instance_number):
         return os.getenv("BLOCKSWORLD3_INSTANCE_DIR").format(instance_number)
     
-    def load_json(self):
-        file_name = f'instance-{self.instance_number}'
-        if os.path.exists(f"prompts/blocksworld_3_tot_one_shot/" + file_name + ".json"):
-            with open(f"prompts/blocksworld_3_tot_one_shot/" + file_name + ".json", "r") as f:
-                return json.load(f)
-        else:
-            structured_output = {
-                                "problem_description": self.problem_description,
-                                "gt_plan": self.gt_plan,
-                                "llm_plan": [],
-                                "prompts": [],
-                                }
-            return structured_output
-    
-    def save_json(self, prompt_number, prompt_report, next_action=None, reset_llm_plan=False):
-        os.makedirs(f"prompts/blocksworld_3_tot_one_shot/", exist_ok=True)
-
-        is_prompt_report_exists = len(self.tot_state["prompts"]) >= prompt_number
-        if (is_prompt_report_exists):
-            target_prompt_index = prompt_number - 1
-            self.tot_state["prompts"][target_prompt_index] = prompt_report
-        else:
-            self.tot_state["prompts"].append(prompt_report)
-
-        if (next_action is not None):
-            self.tot_state["llm_plan"].append(next_action)
-        
-        if (reset_llm_plan):
-            self.tot_state["llm_plan"] = []
-        file_name = f'instance-{self.instance_number}'
-        with open(f"prompts/blocksworld_3_tot_one_shot/" + file_name + ".json", "w") as f:
-            json.dump(self.tot_state, f, indent=4)
+    def update_tot_state(self, prompt_number, prompt_report, next_action=None, reset_llm_plan=False):
+        self.reporter.save_json(prompt_number, prompt_report, next_action, reset_llm_plan)
+        self.tot_state = self.reporter.load_json()
 
     def get_llm_action_description(self, llm_raw_response):
         pddl_action, _ = text_to_plan(llm_raw_response, self.problem.actions, "llm_plan", self.config)
@@ -117,7 +90,7 @@ class tot_one_shot_pipeline:
         }
         print("[INIT] " + possible_actions)
         reset_llm_plan = True
-        self.save_json(prompt_number, report,  None, reset_llm_plan)
+        self.update_tot_state(prompt_number, report,  None, reset_llm_plan)
         self.vote_prompt_llama3_80b(prompt_number + 1)
 
     def tot_prompt_llama3_80b(self, prompt_number):
@@ -133,7 +106,7 @@ class tot_one_shot_pipeline:
             "response": possible_actions
         }
         print("[TOT] " + possible_actions)
-        self.save_json(prompt_number, report)
+        self.update_tot_state(prompt_number, report)
 
         if ('2' in possible_actions):
             self.vote_prompt_llama3_80b(prompt_number + 1)
@@ -145,7 +118,7 @@ class tot_one_shot_pipeline:
             "response": possible_actions,
             }
             new_action = self.get_llm_action_description(possible_actions)
-            self.save_json(prompt_number + 1, vote_report, new_action)
+            self.update_tot_state(prompt_number + 1, vote_report, new_action)
             self.validate_prompt_llama3_80b(prompt_number + 2)
 
     def vote_prompt_llama3_80b(self, prompt_number):
@@ -168,7 +141,7 @@ class tot_one_shot_pipeline:
                     "response": voted_action,
                 }
                 retry_count += 3 # exit while loop
-                self.save_json(prompt_number, report, new_action)
+                self.update_tot_state(prompt_number, report, new_action)
                 self.validate_prompt_llama3_80b(prompt_number + 1)
             except Exception:
                 retry_count += 1
@@ -189,7 +162,7 @@ class tot_one_shot_pipeline:
             "prompt": validate_prompt,
             "response": validation_line,
         }
-        self.save_json(prompt_number, report)
+        self.update_tot_state(prompt_number, report)
 
         if ("does not" in validation_line and math.ceil(prompt_number/3) < self.gt_plan_length * 2):
             self.tot_prompt_llama3_80b(prompt_number + 1)
