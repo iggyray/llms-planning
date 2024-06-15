@@ -3,9 +3,9 @@ from dotenv import load_dotenv
 import os
 from utils import *
 from experiments.tot_stepwise import *
-from setup_handler import setup_handler
-from report_handler import report_handler
-from validation_handler import validation_handler
+from handler_setup import setup_handler
+from handler_report import report_handler
+from handler_validation import validation_handler
 
 class tot_one_shot_pipeline:
     def __init__(self, instance_number) -> None:
