@@ -1,61 +1,26 @@
 import math
 from dotenv import load_dotenv
-import yaml
 import os
-from tarski.io import PDDLReader
 import json
 from utils import *
 from experiments.tot_stepwise import *
+from setup_handler import setup_handler
 
 class tot_one_shot_pipeline:
     def __init__(self, instance_number) -> None:
         load_dotenv()
-        self.config = self.get_config()
-        self.domain = f'./instances/{self.config["domain_file"]}'
+        setup = setup_handler(instance_number)
+        self.config = setup.get_config()
+        self.problem = setup.get_problem()
         self.instance_number = instance_number
-        self.instance_dir = self.get_instance_dir(instance_number)
-        self.gt_plan = ""
-        self.gt_plan_length = 0
-        self.problem_description = ""
-        self.get_problem_description_with_example()
+        self.instance_dir = self.get_instance_dir(instance_number) # no need
+        self.domain = f'./instances/{self.config["domain_file"]}'
+        self.gt_plan, self.gt_plan_length = setup.get_gt_plan()
+        self.problem_description = setup.get_one_shot_problem_description()
         self.tot_state = self.load_json()
-
-    def get_config(self):
-        config_file_path = os.getenv("BLOCKSWORLD3_CONFIG_DIR")
-        with open(config_file_path, 'r') as file:
-            return yaml.safe_load(file)
     
     def get_instance_dir(self, instance_number):
         return os.getenv("BLOCKSWORLD3_INSTANCE_DIR").format(instance_number)
-    
-    def get_gt_plan(self, instance_dir):
-        fast_downward_path = os.getenv("FAST_DOWNWARD_DIR")
-        assert os.path.exists(fast_downward_path)
-        cmd = f"{fast_downward_path} {self.domain} {instance_dir} --search \"astar(lmcut())\" > /dev/null 2>&1"
-        os.system(cmd)
-        self.gt_plan, self.gt_plan_length = get_gt_plan_description_and_length(self.config)
-    
-    def get_problem_description_with_example(self):
-        self.problem_description = self.get_example_problem_description()
-        self.get_gt_plan(self.instance_dir)
-        self.problem_description += self.get_cur_problem_states()
-    
-    def get_cur_problem_states(self):
-        reader = PDDLReader(raise_on_error=True)
-        reader.parse_domain(self.domain)
-        self.problem = reader.parse_instance(self.instance_dir)
-        INIT, GOAL = parse_problem(self.problem, self.config, False)
-        return get_problem_description_only(INIT, GOAL, self.config)
-    
-    def get_example_problem_description(self):
-        example_instance_number = self.instance_number + 1
-        reader = PDDLReader(raise_on_error=True)
-        reader.parse_domain(self.domain)
-        example_instance_dir = self.get_instance_dir(example_instance_number)
-        self.get_gt_plan(example_instance_dir)
-        example_problem = reader.parse_instance(example_instance_dir)
-        INIT, GOAL = parse_problem(example_problem, self.config, False)
-        return get_domain_description_with_example(INIT, GOAL, self.config)
     
     def load_json(self):
         file_name = f'instance-{self.instance_number}'
