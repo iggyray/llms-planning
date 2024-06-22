@@ -11,6 +11,8 @@ class setup_handler:
         self.domain = f'./instances/{self.config["domain_file"]}'
         self.instance_dir = self.get_instance_dir(instance_number)
         self.instance_number = instance_number
+        self.domain_and_example_description = ''
+        self.goal_state = ''
     
     def get_config(self):
         config_file_path = os.getenv("BLOCKSWORLD3_CONFIG_DIR")
@@ -38,29 +40,34 @@ class setup_handler:
         assert os.path.exists(fast_downward_path)
         cmd = f"{fast_downward_path} {self.domain} {instance_dir} --search \"astar(lmcut())\" > /dev/null 2>&1"
         os.system(cmd)
-    
-    def get_zero_shot_problem_description(self):
+
+    def get_parsed_states(self, instance_dir=None):
+        if instance_dir is None:
+            instance_dir = self.instance_dir
         reader = PDDLReader(raise_on_error=True)
         reader.parse_domain(self.domain)
-        cur_problem = reader.parse_instance(self.instance_dir)
+        cur_problem = reader.parse_instance(instance_dir)
         INIT, GOAL = parse_problem(cur_problem, self.config, False)
+        return INIT, GOAL
+    
+    def get_zero_shot_problem_description(self):
+        INIT, GOAL = self.get_parsed_states()
         return get_problem_description(INIT, GOAL, self.config)
     
     def get_one_shot_problem_description(self):
-        reader1 = PDDLReader(raise_on_error=True)
-        reader2 = PDDLReader(raise_on_error=True)
-        reader1.parse_domain(self.domain)
-        reader2.parse_domain(self.domain)
-
         example_instance_number = self.instance_number + 1
         example_instance_dir = self.get_instance_dir(example_instance_number)
         self.gen_gt_plan(example_instance_dir)
-        example_problem = reader1.parse_instance(example_instance_dir)
-        EXAMPLE_INIT, EXAMPLE_GOAL = parse_problem(example_problem, self.config, False)
+        EXAMPLE_INIT, EXAMPLE_GOAL = self.get_parsed_states(example_instance_dir)
         one_shot_problem_description = get_domain_description_with_example(EXAMPLE_INIT, EXAMPLE_GOAL, self.config)
+        self.domain_and_example_description = one_shot_problem_description
         
         self.gen_gt_plan(self.instance_dir)
-        cur_problem = reader2.parse_instance(self.instance_dir)
-        INIT, GOAL = parse_problem(cur_problem, self.config, False)
+        INIT, GOAL = self.get_parsed_states()
+        self.goal_state = GOAL
         one_shot_problem_description += get_problem_description_only(INIT, GOAL, self.config)
         return one_shot_problem_description
+    
+    def get_updated_one_shot_problem_description(self, updated_init_state):
+        updated_description = self.domain_and_example_description + get_problem_description_only(updated_init_state, self.goal_state, self.config)
+        return updated_description
