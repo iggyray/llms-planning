@@ -11,6 +11,8 @@ class setup_handler:
         self.domain = f'./instances/{self.config["domain_file"]}'
         self.instance_dir = self.get_instance_dir(instance_number)
         self.instance_number = instance_number
+        self.domain_and_example_description = ''
+        self.goal_state = ''
     
     def get_config(self):
         config_file_path = os.getenv("BLOCKSWORLD3_CONFIG_DIR")
@@ -58,8 +60,14 @@ class setup_handler:
         self.gen_gt_plan(example_instance_dir)
         EXAMPLE_INIT, EXAMPLE_GOAL = self.get_parsed_states(example_instance_dir)
         one_shot_problem_description = get_domain_description_with_example(EXAMPLE_INIT, EXAMPLE_GOAL, self.config)
+        self.domain_and_example_description = one_shot_problem_description
         
         self.gen_gt_plan(self.instance_dir)
         INIT, GOAL = self.get_parsed_states()
+        self.goal_state = GOAL
         one_shot_problem_description += get_problem_description_only(INIT, GOAL, self.config)
         return one_shot_problem_description
+    
+    def get_updated_one_shot_problem_description(self, updated_init_state):
+        updated_description = self.domain_and_example_description + get_problem_description_only(updated_init_state, self.goal_state, self.config)
+        return updated_description

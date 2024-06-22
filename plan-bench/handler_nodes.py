@@ -34,15 +34,19 @@ class node_db:
         return self.db[parent_id]["state"]
     
     def get_plan(self, node_id, current_plan=None):
+        cur_node = self.db[node_id]
         if current_plan is None:
             current_plan = []
-        if node_id is None:
-            return current_plan
+        if cur_node["parent_id"] is None:
+            plan_str = ''.join(current_plan)
+            return plan_str
         
-        current_plan.insert(0, self.db[node_id]['action'])
-        next_node_id = self.db[node_id]['parent_id']
-
+        current_plan.insert(0, cur_node['action'])
+        next_node_id = cur_node['parent_id']
         return self.get_plan(next_node_id, current_plan)
+    
+    def get_all_nodes(self):
+        return self.db
     
 # if __name__=="__main__":
 #     # arrange
