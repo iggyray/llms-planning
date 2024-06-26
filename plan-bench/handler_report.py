@@ -64,8 +64,11 @@ class report_handler:
     def save_json_v2(self, prompt_number, prompt_report, nodes, llm_plan=None, reset_llm_plan=False):
         os.makedirs(self.file_path_v2, exist_ok=True)
         report = self.load_json_v2()
+        if (reset_llm_plan):
+            report["llm_plan"] = []
+            report["prompts"] = []
+            
         is_prompt_report_exists = len(report["prompts"]) >= prompt_number
-
         if (is_prompt_report_exists):
             target_prompt_index = prompt_number - 1
             report["prompts"][target_prompt_index] = prompt_report
@@ -74,9 +77,6 @@ class report_handler:
         
         if (llm_plan is not None):
             report["llm_plan"] = llm_plan
-        
-        if (reset_llm_plan):
-            report["llm_plan"] = []
         
         report["nodes"] = nodes
         

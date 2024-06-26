@@ -52,6 +52,7 @@ class tot_bfs_pipeline:
                 print('[RETRY TOT]')
                 retry_count += 1
                 if (retry_count == 3):
+                    self.validator.report_failed_instance('failed to get formatted action from tot response')
                     raise Exception('failed to get formatted action from tot response')
     
     def tot_prompt(self):
@@ -64,7 +65,7 @@ class tot_bfs_pipeline:
             updated_init_state = self.node_db.get_state_from_id(self.cur_node_id)
             self.problem_description = self.setup.get_updated_one_shot_problem_description(updated_init_state)
 
-        prompt_with_domain = self.problem_description + exp_bfs_init_tot_prompt_v2
+        prompt_with_domain = self.problem_description + exp_bfs_init_tot_prompt
         formatted_actions = self.get_formatted_actions_from_tot_response(prompt_with_domain)
         node_id_list = []
         for formatted_action in formatted_actions:
@@ -95,7 +96,7 @@ class tot_bfs_pipeline:
             llm_plan = self.node_db.get_plan(valid_plan_node_id)
             self.validator.validate_llm_plan(llm_plan)
             return
-        elif len(self.tot_queue) > 0:
+        elif len(self.tot_queue) > 0 & self.prompt_number < 30:
             self.tot_prompt()
         else:
             self.validator.report_failed_instance('tot queue empty')
@@ -126,7 +127,7 @@ class tot_bfs_pipeline:
         self.prompt_number += 1
         llm_plan = self.node_db.get_plan(node_id)
         latest_state = self.node_db.get_state_from_id(node_id)
-        validate_prompt = exp_bfs_validate_prompt.format(llm_plan)
+        validate_prompt = exp_bfs_validate_prompt.format(llm_plan, latest_state)
         prompt_with_domain = self.problem_description + validate_prompt
         response = prompt_llama3_80b(prompt_with_domain)
         validation_line = response.splitlines()[-1].lower().replace('*', '')
@@ -193,16 +194,17 @@ class tot_bfs_pipeline:
     #     # self.validate_prompt(self.prompt_number + 1)
     
 if __name__=="__main__":
-    target_instances = [8]
+    target_instances = [
+      8, 20, 33, 36, 41, 45, 47, 48, 73, 77, 83, 86, 89, 92, 93, 96, 100
+    ]
 
     try:
         for index, target_instance_number in enumerate(target_instances, start=1):
             print(f'[INSTANCE NUMBER]: {target_instance_number} || [PROGRESS]: {index} / {len(target_instances)}')
             tot = tot_bfs_pipeline(target_instance_number)
-            tot.tot_prompt()
-            # try:
-            #     tot.tot_prompt()
-            # except:
-            #     print('SYNTAX ERROR')
+            try:
+                tot.tot_prompt()
+            except:
+                print('SYNTAX ERROR')
     except KeyboardInterrupt:
         print("\nProcess interrupted by user. Exiting...")
