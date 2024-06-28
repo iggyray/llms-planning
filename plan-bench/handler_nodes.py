@@ -45,6 +45,20 @@ class node_db:
         next_node_id = cur_node['parent_id']
         return self.get_plan(next_node_id, current_plan)
     
+    def get_cur_node_depth(self, node_id, total_depth=None):
+        '''
+        root_node_depth = 0, child_node_depth = 1, ... 
+        '''
+        cur_node = self.db[node_id]
+        if total_depth is None:
+            total_depth = 0
+        if cur_node["parent_id"] is None:
+            return total_depth
+        
+        total_depth += 1
+        next_node_id = cur_node['parent_id']
+        return self.get_cur_node_depth(next_node_id, total_depth)
+    
     def get_all_nodes(self):
         return self.db
     
