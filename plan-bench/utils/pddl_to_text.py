@@ -208,6 +208,34 @@ def get_problem_description_only(INIT, GOAL, config):
         description += f"<goal-state>My goal is to have that {GOAL.strip()}.</goal-state>\n"
     return description
 
+def get_apb_domain_description_with_example(INIT, GOAL, config):
+    description = f'<domain>{config["domain_intro"]}</domain>\nHere is an example problem, and a corresponding solution plan that can achieve the goal state from the initial state:\n<example>\n'
+    if INIT != "":
+        description += f"<initial-state>The example initial state is as follows: {INIT.strip()}.</initial-state>\n"
+    if GOAL != "":
+        description += f"<goal-state>My goal is to have that {GOAL.strip()}.</goal-state>\n"
+    description += "<plan>\n"
+    description += get_gt_plan_description(config)
+    description += "</plan>\n</example>"
+    return description
+
+def get_apb_problem_description_only(INIT, GOAL):
+    description = "\n"
+    if INIT != "":
+        description += f"<initial-state>My current situation is as follows: {INIT.strip()}.</initial-state>\n"
+    if GOAL != "":
+        description += f"<goal-state>My goal is to have that {GOAL.strip()}.</goal-state>\n"
+    return description
+
+def get_apb_update_state_instruction(INIT, ACTION, config):
+    description = f'<domain>{config["domain_intro"]}</domain>\nHere is an example problem, and a corresponding solution plan that can achieve the goal state from the initial state:\n<example>\n'
+    if INIT != "":
+        description += f"<initial-state>The current state of blocks is as follows: {INIT.strip()}.</initial-state>\n"
+    if ACTION != "":
+        description += f"From the initial state, if I {ACTION}, what will the resulting state be?"
+    description += 'You must return the resulting state in the following format, including the html <state> tag. "<state>\n- The red block is {clear/ not clear/ in my hand}\n- The blue block is {clear/ not clear/ in my hand}\n- The orange block is {clear/ not clear/ in my hand}\n- The red block is {on top of the blue block/ on top of the orange block/ on the table/ in my hand}\n- The blue block is {on top of the red block/ on top of the orange block/ on the table/ in my hand}\n- The orange block is {on top of the red block/ on top of the blue block/ on the table/ in my hand}\n- the hand {is/ is not} empty\n</state>" For each statement, you must choose 1 option from the provided options.'
+    return description
+
 def get_gt_plan_description(config):
     OBJS = config['encoded_objects']
     # ----------- PLAN TO TEXT ----------- #
