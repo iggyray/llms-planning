@@ -66,20 +66,27 @@ class base_tot_bfs_pipeline:
         else:
             self.prompt_number += 1
             self.cur_node_id = self.tot_queue[0]
+
+        # check depth
+        cur_node_depth = self.node_db.get_cur_node_depth(self.cur_node_id)
+        if cur_node_depth == self.depth_limit: # all nodes in depth_limit have been generated, no need TOT
+            print('[INIT PLAN VALIDATOR]')
+            llm_plans = []
+            for node_id in self.tot_queue:
+                llm_plan = self.node_db.get_plan(node_id)
+                llm_plans.append(llm_plan)
+            self.update_tot_state({},  llm_plans, False)
+            self.validator.validate_llm_plans(llm_plans)
+            return
+            
+        # update state
+        if self.cur_node_id != '0':
             self.tot_queue.pop(0)
+            self.get_updated_state_from_action_prompt(self.cur_node_id)
             updated_init_state = self.node_db.get_state_from_id(self.cur_node_id)
             self.problem_description = self.setup.get_updated_one_shot_problem_description(updated_init_state, True)
 
-        cur_node_depth = self.node_db.get_cur_node_depth(self.cur_node_id)
-        if cur_node_depth == self.depth_limit: # all nodes in depth_limit have been generated, no need TOT
-            llm_plans = []
-            for node_id in node_id_list:
-                llm_plan = self.node_db.get_plan(node_id)
-                llm_plans.append(llm_plan)
-            self.update_tot_state(report,  llm_plans, reset_llm_plan)
-            self.validator.validate_llm_plans(llm_plans)
-            return
-        
+        # ToT
         prompt_with_domain = self.problem_description + exp_bfs_init_tot_prompt
         reset_llm_plan = self.prompt_number == 1
         report = {
@@ -95,14 +102,13 @@ class base_tot_bfs_pipeline:
             node_id_list.append(new_node_id)
         
         formatted_possible_actions_list = list(map(self.node_db.get_action_from_id, node_id_list))
-        print("[TOT] " + ''.join(formatted_possible_actions_list))
+        print(f"[TOT] depth: {self.cur_depth} | " + ''.join(formatted_possible_actions_list).replace('\n', '; '))
         report["response"] = formatted_possible_actions_list
         self.update_tot_state(report,  None, reset_llm_plan)
         
+        # validate and add to ToT queue
         for node_id in node_id_list:
                 self.validate_action_prompt(node_id)
-                if node_id in self.tot_queue:
-                    self.get_updated_state_from_action_prompt(node_id)
 
         if len(self.tot_queue) > 0:
             self.tot_prompt()
