@@ -176,9 +176,7 @@ class base_tot_bfs_pipeline:
         self.tot_queue.append(node_id)
     
 if __name__=="__main__":
-    target_instances = [
-      8
-    ]
+    target_instances = []
     for index, target_instance_number in enumerate(target_instances, start=1):
         print(f'[INSTANCE NUMBER]: {target_instance_number} || [PROGRESS]: {index} / {len(target_instances)}')
         tot = base_tot_bfs_pipeline(target_instance_number)
