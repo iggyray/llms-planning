@@ -22,10 +22,8 @@ class base_tot_bfs_pipeline:
         self.reporter = report_handler(instance_number, self.problem_description, self.gt_plan)
         init_state, _ = self.setup.get_parsed_states()
         self.node_db = node_db(init_state)
-        self.cur_node_id = "0"
         self.tot_queue = []
         self.prompt_number = None
-        self.cur_depth = 0
     
     def update_tot_state(self, prompt_report, llm_plan=None, reset_llm_plan=False):
         updated_nodes = self.node_db.get_all_nodes()
@@ -63,12 +61,13 @@ class base_tot_bfs_pipeline:
     def tot_prompt(self):
         if self.prompt_number is None:
             self.prompt_number = 1
+            cur_node_id = "0" # root node id is '0'
         else:
             self.prompt_number += 1
-            self.cur_node_id = self.tot_queue[0]
+            cur_node_id = self.tot_queue[0]
 
         # check depth
-        cur_node_depth = self.node_db.get_cur_node_depth(self.cur_node_id)
+        cur_node_depth = self.node_db.get_cur_node_depth(cur_node_id)
         if cur_node_depth == self.depth_limit: # all nodes in depth_limit have been generated, no need TOT
             print('[INIT PLAN VALIDATOR]')
             llm_plans = []
@@ -80,10 +79,10 @@ class base_tot_bfs_pipeline:
             return
             
         # update state
-        if self.cur_node_id != '0':
+        if cur_node_id != '0':
             self.tot_queue.pop(0)
-            self.get_updated_state_from_action_prompt(self.cur_node_id)
-            updated_init_state = self.node_db.get_state_from_id(self.cur_node_id)
+            self.update_predicate_state_prompt(cur_node_id)
+            updated_init_state = self.node_db.get_state_from_id(cur_node_id)
             self.problem_description = self.setup.get_updated_one_shot_problem_description(updated_init_state, True)
 
         # ToT
@@ -96,19 +95,23 @@ class base_tot_bfs_pipeline:
         }
         self.update_tot_state(report,  None, reset_llm_plan)
         formatted_actions = self.get_formatted_actions_from_tot_response(prompt_with_domain)
-        node_id_list = []
+        child_node_id_list = []
         for formatted_action in formatted_actions:
-            new_node_id = self.node_db.add_node(formatted_action, self.cur_node_id)
-            node_id_list.append(new_node_id)
+            new_node_id = self.node_db.add_node(formatted_action, cur_node_id)
+            child_node_id_list.append(new_node_id)
         
-        formatted_possible_actions_list = list(map(self.node_db.get_action_from_id, node_id_list))
-        print(f"[TOT] depth: {self.cur_depth} | " + ''.join(formatted_possible_actions_list).replace('\n', '; '))
+        formatted_possible_actions_list = list(map(self.node_db.get_action_from_id, child_node_id_list))
+        print(f"[TOT] depth: {cur_node_depth} | " + ''.join(formatted_possible_actions_list).replace('\n', '; '))
         report["response"] = formatted_possible_actions_list
         self.update_tot_state(report,  None, reset_llm_plan)
         
         # validate and add to ToT queue
-        for node_id in node_id_list:
-                self.validate_action_prompt(node_id)
+        for node_id in child_node_id_list:
+                child_node_depth = self.node_db.get_cur_node_depth(node_id)
+                if child_node_depth == self.depth_limit:
+                    self.tot_queue.append(node_id)
+                else:
+                    self.evaluate_prompt(node_id)
 
         if len(self.tot_queue) > 0:
             self.tot_prompt()
@@ -116,16 +119,16 @@ class base_tot_bfs_pipeline:
             self.validator.report_failed_instance('tot queue empty')
             return
     
-    def get_updated_state_from_action_prompt(self, node_id):
+    def update_predicate_state_prompt(self, node_id):
         self.prompt_number += 1
         init_state = self.node_db.get_parent_state_from_id(node_id)
         node_action = self.node_db.get_action_from_id(node_id)
-        get_state_prompt = self.setup.get_update_state_instruction(init_state, node_action)
+        update_state_prompt = self.setup.get_update_state_instruction(init_state, node_action)
         start_delim = '<state>'
         end_delim = '</state>'
         retry_count = 0
         while retry_count < 3:
-            response = prompt_llama3_80b(get_state_prompt)
+            response = prompt_llama3_80b(update_state_prompt)
             if start_delim in response:
                 break
             else:
@@ -141,17 +144,17 @@ class base_tot_bfs_pipeline:
         report = {
             "prompt_number": self.prompt_number,
             "type": 'state',
-            "prompt": get_state_prompt,
+            "prompt": update_state_prompt,
             "response": updated_state,
         }
         self.update_tot_state(report)
     
-    def validate_action_prompt(self, node_id):
+    def evaluate_prompt(self, node_id):
         self.prompt_number += 1
         node_action = self.node_db.get_action_from_id(node_id)
         # latest_state = self.node_db.get_state_from_id(node_id)
-        vote_prompt = exp_bfs_vote_prompt_v2.format(node_action)
-        prompt_with_domain = self.problem_description + vote_prompt
+        eval_prompt = exp_bfs_vote_prompt_v2.format(node_action)
+        prompt_with_domain = self.problem_description + eval_prompt
         retry_count = 0
         while retry_count < 3:
             response = prompt_llama3_80b(prompt_with_domain)
@@ -163,11 +166,11 @@ class base_tot_bfs_pipeline:
                 retry_count += 1
         else:
             raise Exception('vote prompt exceeded retries')
-        print('[VOTE] ' + vote_line)
+        print('[EVAL] ' + vote_line)
         report = {
             "prompt_number": self.prompt_number,
             "type": 'vote',
-            "prompt": vote_prompt,
+            "prompt": eval_prompt,
             "response": vote_line,
         }
         self.update_tot_state(report)
