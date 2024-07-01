@@ -159,27 +159,30 @@ class base_tot_bfs_pipeline:
         while retry_count < 3:
             response = prompt_llama3_80b(prompt_with_domain)
             vote_line = response.splitlines()[-1].lower()
-            if ("continue the plan" in vote_line or "re-evaluate the plan" in vote_line):
+            if ("valid action" in vote_line or "re-evaluate action" in vote_line):
                 break
             else:
-                print('[RETRY VOTE]')
+                print('[RETRY EVAL]')
                 retry_count += 1
         else:
             raise Exception('vote prompt exceeded retries')
         print('[EVAL] ' + vote_line)
         report = {
             "prompt_number": self.prompt_number,
-            "type": 'vote',
+            "type": 'evaluate',
+            'action': node_action,
             "prompt": eval_prompt,
             "response": vote_line,
         }
         self.update_tot_state(report)
-        if ("re-evaluate the plan" in vote_line):
+        if ("re-evaluate action" in vote_line):
             return
         self.tot_queue.append(node_id)
     
 if __name__=="__main__":
-    target_instances = []
+    target_instances = [
+        2
+    ]
     for index, target_instance_number in enumerate(target_instances, start=1):
         print(f'[INSTANCE NUMBER]: {target_instance_number} || [PROGRESS]: {index} / {len(target_instances)}')
         tot = base_tot_bfs_pipeline(target_instance_number)
