@@ -25,6 +25,17 @@ class validation_handler:
         else:
             self.report_failed_instance("invalid plan")
     
+    def validate_llm_plans(self, llm_plans):
+        for llm_plan in llm_plans:
+            text_to_plan(llm_plan, self.problem.actions, "llm_plan", self.config) # save plan to plan file
+            result = validate_plan(self.domain, self.instance_dir, 'llm_plan')
+            if (result):
+                self.report_passed_instance()
+                print('[PLAN VALID]: ' + str(result))
+                return
+        self.report_failed_instance("invalid plan")
+        print('[PLAN VALID]: ' + str(result))
+    
     def report_passed_instance(self):
         instance_report = {
             "instance_number": self.instance_number,

@@ -208,6 +208,41 @@ def get_problem_description_only(INIT, GOAL, config):
         description += f"<goal-state>My goal is to have that {GOAL.strip()}.</goal-state>\n"
     return description
 
+def get_apb_domain_description_with_example(INIT, GOAL, config):
+    description = f'<domain>{config["domain_intro"]}</domain>\nHere is an example problem, and a corresponding solution plan that can achieve the goal state from the initial state:\n<example>\n'
+    if INIT != "":
+        description += f"<initial-state>The example initial state is as follows: {INIT.strip()}.</initial-state>\n"
+    if GOAL != "":
+        description += f"<goal-state>My goal is to have that {GOAL.strip()}.</goal-state>\n"
+    description += "<plan>\n"
+    description += get_gt_plan_description(config)
+    description += "</plan>\n</example>"
+    return description
+
+def get_apb_problem_description_only(INIT, GOAL):
+    description = "\n"
+    if INIT != "":
+        description += f"<initial-state>My current situation is as follows: {INIT.strip()}.</initial-state>\n"
+    if GOAL != "":
+        description += f"<goal-state>My goal is to have that {GOAL.strip()}.</goal-state>\n"
+    return description
+
+def get_apb_states(INIT, GOAL):
+    if INIT != "":
+        init_state = f"<initial-state>My current situation is as follows: {INIT.strip()}.</initial-state>\n"
+    if GOAL != "":
+        goal_state = f"<goal-state>My goal is to have that {GOAL.strip()}.</goal-state>\n"
+    return init_state, goal_state
+
+def get_apb_update_state_instruction(INIT, ACTION, config):
+    description = f'<domain>{config["domain_intro"]}</domain>\n<example-1><initial-state>- The red block is in my hand\n- The blue block is clear\n- The orange block is clear\n- The blue block is on the table\n- The orange block is on the table\n- the hand is not empty.</initial-state><action> stack the red block on top of the blue block </action><resulting-state>- The red block is clear\n- The blue block is not clear\n- The orange block is clear\n- The red block is on top of the blue block\n- The blue block is on the table\n- The orange block is on the table\n- the hand is empty.</resulting-state></example-1>\n<example-2><initial-state>- The red block clear\n- The blue block is clear\n- The orange block is not clear\n- The red block is on top of the orange block\n- The blue block is on the table\n- The orange block is on the table\n- the hand is empty.</initial-state><action> unstack the red block from on top of the orange block </action><resulting-state>- The red block is in my hand\n- The blue block is clear\n- The orange block is clear\n- The blue block is on the table\n- The orange block is on the table\n- the hand is not empty.</resulting-state></example-2>'
+    if INIT != "":
+        description += f"\nStudy the initial state carefully. <initial-state>{INIT.strip()}</initial-state>\n"
+    if ACTION != "":
+        description += f"From the initial state, if I {ACTION}, what will the resulting state be? "
+    description += 'You must return the resulting state in the following format, including the html <state> tag. "<state>\n- The red block is {clear/ not clear/ in my hand}\n- The blue block is {clear/ not clear/ in my hand}\n- The orange block is {clear/ not clear/ in my hand}\n- The red block is {on top of the blue block/ on top of the orange block/ on the table/ in my hand}\n- The blue block is {on top of the red block/ on top of the orange block/ on the table/ in my hand}\n- The orange block is {on top of the red block/ on top of the blue block/ on the table/ in my hand}\n- the hand {is/ is not} empty\n</state>"'
+    return description
+
 def get_gt_plan_description(config):
     OBJS = config['encoded_objects']
     # ----------- PLAN TO TEXT ----------- #

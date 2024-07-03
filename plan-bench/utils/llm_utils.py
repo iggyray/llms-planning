@@ -32,7 +32,7 @@ def prompt_llama3_80b(query):
                 "content": query
             }
         ],
-        temperature=1,
+        temperature=0.3,
         max_tokens=1024,
         top_p=1,
         stop=None,

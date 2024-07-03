@@ -54,20 +54,55 @@ class setup_handler:
         INIT, GOAL = self.get_parsed_states()
         return get_problem_description(INIT, GOAL, self.config)
     
-    def get_one_shot_problem_description(self):
+    def get_one_shot_problem_description(self, use_apb_model=False):
         example_instance_number = self.instance_number + 1
         example_instance_dir = self.get_instance_dir(example_instance_number)
         self.gen_gt_plan(example_instance_dir)
         EXAMPLE_INIT, EXAMPLE_GOAL = self.get_parsed_states(example_instance_dir)
-        one_shot_problem_description = get_domain_description_with_example(EXAMPLE_INIT, EXAMPLE_GOAL, self.config)
+        if use_apb_model:
+            one_shot_problem_description = get_apb_domain_description_with_example(EXAMPLE_INIT, EXAMPLE_GOAL, self.config)
+        else:
+            one_shot_problem_description = get_domain_description_with_example(EXAMPLE_INIT, EXAMPLE_GOAL, self.config)
         self.domain_and_example_description = one_shot_problem_description
         
         self.gen_gt_plan(self.instance_dir)
         INIT, GOAL = self.get_parsed_states()
         self.goal_state = GOAL
-        one_shot_problem_description += get_problem_description_only(INIT, GOAL, self.config)
+        if use_apb_model:
+            one_shot_problem_description += get_apb_problem_description_only(INIT, GOAL)
+        else:
+            one_shot_problem_description += get_problem_description_only(INIT, GOAL, self.config)
         return one_shot_problem_description
     
-    def get_updated_one_shot_problem_description(self, updated_init_state):
-        updated_description = self.domain_and_example_description + get_problem_description_only(updated_init_state, self.goal_state, self.config)
+    def get_one_shot_problem_description_only(self):
+        example_instance_number = self.instance_number + 1
+        example_instance_dir = self.get_instance_dir(example_instance_number)
+        self.gen_gt_plan(example_instance_dir)
+        EXAMPLE_INIT, EXAMPLE_GOAL = self.get_parsed_states(example_instance_dir)
+        one_shot_problem_description = get_apb_domain_description_with_example(EXAMPLE_INIT, EXAMPLE_GOAL, self.config)
+        self.domain_and_example_description = one_shot_problem_description
+        return one_shot_problem_description
+    
+    def get_zero_shot_domain_description(self):
+        return f'<domain>{self.config["domain_intro"]}</domain>'
+
+    def get_state_descriptions(self, init_state=None):
+        self.gen_gt_plan(self.instance_dir)
+        INIT, GOAL = self.get_parsed_states()
+        self.goal_state = GOAL
+        if init_state is None:
+            latest_init_state = INIT
+        else:
+            latest_init_state = init_state
+        return get_apb_states(latest_init_state, GOAL)
+    
+    def get_update_state_instruction(self, init_state, action):
+        return get_apb_update_state_instruction(init_state, action, self.config)
+    
+    def get_updated_one_shot_problem_description(self, updated_init_state, use_apb_model=False):
+        if (use_apb_model):
+            instruction = get_apb_problem_description_only(updated_init_state, self.goal_state)
+        else:
+            instruction = get_problem_description_only(updated_init_state, self.goal_state, self.config)
+        updated_description = self.domain_and_example_description + instruction
         return updated_description
