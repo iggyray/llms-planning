@@ -17,9 +17,10 @@ class base_tot_bfs_pipeline:
         self.problem = self.setup.get_problem()
         self.instance_dir = os.getenv("BLOCKSWORLD3_INSTANCE_DIR").format(instance_number)
         self.gt_plan, self.depth_limit = self.setup.get_gt_plan()
-        self.problem_description = self.setup.get_one_shot_problem_description(True)
+        self.domain_description = self.setup.get_zero_shot_domain_description()
+        self.init_state, self.goal_state = self.setup.get_state_descriptions()
         self.validator = validation_handler(self.config, self.domain, self.problem, instance_number, self.instance_dir)
-        self.reporter = report_handler(instance_number, self.problem_description, self.gt_plan)
+        self.reporter = report_handler(instance_number, self.domain_description, self.gt_plan)
         init_state, _ = self.setup.get_parsed_states()
         self.node_db = node_db(init_state)
         self.tot_queue = []
@@ -83,10 +84,10 @@ class base_tot_bfs_pipeline:
             self.tot_queue.pop(0)
             self.update_predicate_state_prompt(cur_node_id)
             updated_init_state = self.node_db.get_state_from_id(cur_node_id)
-            self.problem_description = self.setup.get_updated_one_shot_problem_description(updated_init_state, True)
+            self.init_state, _ = self.setup.get_state_descriptions(updated_init_state)
 
         # ToT
-        prompt_with_domain = self.problem_description + exp_bfs_init_tot_prompt
+        prompt_with_domain = self.domain_description + exp_bfs_init_tot_example + self.init_state + exp_bfs_init_tot_prompt
         reset_llm_plan = self.prompt_number == 1
         report = {
             "prompt_number": self.prompt_number,
@@ -145,16 +146,17 @@ class base_tot_bfs_pipeline:
             "prompt_number": self.prompt_number,
             "type": 'state',
             "prompt": update_state_prompt,
+            "init_state": init_state,
+            "action": node_action,
             "response": updated_state,
         }
         self.update_tot_state(report)
     
     def evaluate_prompt(self, node_id):
-        self.prompt_number += 1
         node_action = self.node_db.get_action_from_id(node_id)
-        # latest_state = self.node_db.get_state_from_id(node_id)
+        self.prompt_number += 1
         eval_prompt = exp_bfs_vote_prompt_v2.format(node_action)
-        prompt_with_domain = self.problem_description + eval_prompt
+        prompt_with_domain = self.domain_description + self.init_state + eval_prompt
         retry_count = 0
         while retry_count < 3:
             response = prompt_llama3_80b(prompt_with_domain)
@@ -180,9 +182,7 @@ class base_tot_bfs_pipeline:
         self.tot_queue.append(node_id)
     
 if __name__=="__main__":
-    target_instances = [
-        2
-    ]
+    target_instances = []
     for index, target_instance_number in enumerate(target_instances, start=1):
         print(f'[INSTANCE NUMBER]: {target_instance_number} || [PROGRESS]: {index} / {len(target_instances)}')
         tot = base_tot_bfs_pipeline(target_instance_number)
