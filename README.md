@@ -10,6 +10,7 @@ We explore the application of the [Tree of Thought](https://arxiv.org/abs/2305.1
 4. Define environment variables
 
 ```
+# setup
 BLOCKSWORLD3_CONFIG_DIR=""
 VAL_PATH_FROM_PLAN_BENCH_DIR=""
 GROQ_API_KEY=""
